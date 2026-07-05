@@ -1,7 +1,8 @@
-// schema.ts — embedded copy of migrations/0001_init.sql used by ensureSchema()
+// schema.ts — embedded copy of migrations/*.sql used by ensureSchema()
 // (embedded so ensureSchema needs no file-read permission at runtime). Every
-// statement is idempotent. KEEP IN SYNC with migrations/0001_init.sql —
-// test/schema_sync_test.ts asserts table/index/seed coverage matches.
+// statement is idempotent. KEEP IN SYNC with the migrations —
+// test/schema_sync_test.ts asserts table/index/seed coverage matches the
+// union of every file in migrations/.
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS public.bundles (
   id         SERIAL PRIMARY KEY,
@@ -74,6 +75,37 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at   TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS public.listings (
+  id          SERIAL PRIMARY KEY,
+  sample_id   INTEGER REFERENCES public.samples(id) ON DELETE SET NULL,
+  marketplace TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'pending',
+  source      TEXT,
+  sku         TEXT,
+  offer_id    TEXT,
+  external_id TEXT,
+  listing_url TEXT,
+  ask_price   DOUBLE PRECISION,
+  currency    TEXT DEFAULT 'USD',
+  creator     TEXT,
+  operator    TEXT,
+  error       TEXT,
+  listed_at   TIMESTAMPTZ,
+  ended_at    TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.marketplace_accounts (
+  marketplace  TEXT PRIMARY KEY,
+  environment  TEXT NOT NULL DEFAULT 'sandbox',
+  credentials  JSONB NOT NULL DEFAULT '{}',
+  settings     JSONB NOT NULL DEFAULT '{}',
+  connected_at TIMESTAMPTZ,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_by   TEXT
+);
+
 CREATE TABLE IF NOT EXISTS public.graylog_messages (
   id          BIGSERIAL PRIMARY KEY,
   message_id  TEXT UNIQUE NOT NULL,
@@ -91,6 +123,9 @@ CREATE INDEX IF NOT EXISTS idx_samples_related_upc ON public.samples USING GIN (
 CREATE INDEX IF NOT EXISTS idx_bundles_qr_code ON public.bundles (qr_code);
 CREATE INDEX IF NOT EXISTS idx_transactions_sample_id ON public.transactions (sample_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON public.transactions (created_at);
+CREATE INDEX IF NOT EXISTS idx_listings_sample_id ON public.listings (sample_id);
+CREATE INDEX IF NOT EXISTS idx_listings_status ON public.listings (status);
+CREATE INDEX IF NOT EXISTS idx_listings_marketplace_status ON public.listings (marketplace, status);
 CREATE INDEX IF NOT EXISTS idx_graylog_messages_timestamp ON public.graylog_messages ("timestamp" DESC);
 CREATE INDEX IF NOT EXISTS idx_graylog_messages_source_timestamp ON public.graylog_messages (source, "timestamp" DESC);
 CREATE INDEX IF NOT EXISTS idx_graylog_messages_creator ON public.graylog_messages ((fields->>'creator'), "timestamp" DESC);

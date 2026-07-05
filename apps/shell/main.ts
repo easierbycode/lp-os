@@ -27,6 +27,13 @@ import {
   type LifecycleReads,
   listSampleStatuses,
 } from "@lp-os/lifecycle";
+import {
+  accountConnected,
+  createListingService,
+  type ListingService,
+  type ListSampleInput,
+  startAutoLister,
+} from "@lp-os/marketplace";
 import { DEFAULT_USER_ID, rbacClientConfig } from "./core/roles.ts";
 
 /* ------------------------------------------------------------------ env -- */
@@ -88,6 +95,18 @@ const store: GraylogStore | null = hasDb
 // real store (`rangeSeconds`), so the store satisfies it directly — no adapter.
 const lifecycle: (Lifecycle & LifecycleReads) | null = store
   ? createLifecycle({ db, store })
+  : null;
+
+// Real marketplace listings (eBay first). Credentials/settings live in the
+// marketplace_accounts table, filled in through the Marketplace window.
+const listingService: ListingService | null = store && lifecycle
+  ? createListingService({
+    db,
+    store,
+    lifecycle,
+    getAccount: (marketplace) => db.getMarketplaceAccount(marketplace),
+    listAccounts: () => db.listMarketplaceAccounts(),
+  })
   : null;
 
 /* -------------------------------------------------------------- helpers -- */
@@ -354,6 +373,12 @@ app.get("/", (ctx) => renderOSShell(ctx.url));
 app.get("/install", async (ctx) => {
   const res = await serveStatic("/install.html", ctx.req.method);
   return res ?? json({ error: "install page missing" }, 500);
+});
+
+// Marketplace window (eBay credentials + listings). Same pattern as /install.
+app.get("/marketplace", async (ctx) => {
+  const res = await serveStatic("/marketplace.html", ctx.req.method);
+  return res ?? json({ error: "marketplace page missing" }, 500);
 });
 
 app.get("/scan-client.js", async () => {
@@ -660,6 +685,178 @@ app.get("/api/creators", async (ctx) => {
 
 app.get("/api/roles", (ctx) => json(rbacClientConfig(resolveUserId(ctx.url))));
 
+/* -------------------------------------------------- marketplace listings -- */
+// Real listings (eBay first): the listings table is the current-status truth
+// UIs render; the Graylog "listed"/"listing_failed" events remain the
+// analytics history. Credentials never leave the server — GET views expose
+// which credential KEYS are set, never their values.
+
+function publicMarketplaceView(account: db.MarketplaceAccount) {
+  const credentials = account.credentials ?? {};
+  const credentialKeys = Object.keys(credentials)
+    .filter((k) => String(credentials[k] ?? "").trim())
+    .sort();
+  return {
+    marketplace: account.marketplace,
+    environment: account.environment,
+    connected: accountConnected(account),
+    credentialKeys,
+    settings: account.settings ?? {},
+    connected_at: account.connected_at,
+    updated_at: account.updated_at,
+    updated_by: account.updated_by,
+  };
+}
+
+function marketplaceParam(params: Record<string, string>): string {
+  return decodeURIComponent(params.marketplace || "").trim().toLowerCase();
+}
+
+app.all("/api/listings", async (ctx) => {
+  if (!hasDb) return dbUnavailable();
+  if (ctx.req.method === "GET") {
+    try {
+      const p = ctx.url.searchParams;
+      const rows = await db.listListingsWithSamples({
+        sample_id: p.get("sample_id") ?? undefined,
+        marketplace: p.get("marketplace") ?? undefined,
+        status: p.get("status") ?? undefined,
+      }, parseLimit(ctx.url));
+      return json(rows);
+    } catch (error) {
+      return json({ error: errorMessage(error) }, 500);
+    }
+  }
+  if (ctx.req.method === "POST") {
+    // On-demand listing: publishes through the marketplace API, then records
+    // the listings row + Graylog event. Validation problems → 400; a publish
+    // attempt that failed remotely → 200 {ok:false, error, listing}.
+    if (!listingService) return dbUnavailable();
+    try {
+      const body = await readJsonBody(ctx.req);
+      return json(await listingService.listSample(body as ListSampleInput));
+    } catch (error) {
+      return json({ ok: false, error: errorMessage(error) }, 400);
+    }
+  }
+  return json({ error: "Method not allowed" }, 405);
+});
+
+// Trigger one auto-list pass now (the same pass the boot cron runs): fires
+// due schedules and, where opted in, lists cleared_to_sell samples.
+app.all("/api/listings/run-due", async (ctx) => {
+  if (ctx.req.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed" }, 405);
+  }
+  if (!listingService) return dbUnavailable();
+  try {
+    return json(await listingService.runAutoListPass());
+  } catch (error) {
+    return json({ ok: false, error: errorMessage(error) }, 500);
+  }
+});
+
+app.all("/api/marketplaces", async (ctx) => {
+  if (ctx.req.method !== "GET") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+  if (!hasDb) return dbUnavailable();
+  try {
+    const accounts = await db.listMarketplaceAccounts();
+    return json(accounts.map(publicMarketplaceView));
+  } catch (error) {
+    return json({ error: errorMessage(error) }, 500);
+  }
+});
+
+// Live credential check against the marketplace API; a pass stamps
+// connected_at so the UI can show when the connection last verified.
+app.all("/api/marketplaces/:marketplace/verify", async (ctx) => {
+  if (ctx.req.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed" }, 405);
+  }
+  if (!listingService) return dbUnavailable();
+  const marketplace = marketplaceParam(ctx.params);
+  try {
+    const result = await listingService.verifyMarketplace(marketplace);
+    if (result.ok) await db.touchMarketplaceAccountVerified(marketplace);
+    return json(result);
+  } catch (error) {
+    return json({ ok: false, detail: errorMessage(error) }, 500);
+  }
+});
+
+app.all("/api/marketplaces/:marketplace", async (ctx) => {
+  if (!hasDb) return dbUnavailable();
+  const marketplace = marketplaceParam(ctx.params);
+  if (!marketplace) return json({ error: "marketplace required" }, 400);
+  try {
+    if (ctx.req.method === "GET") {
+      const account = await db.getMarketplaceAccount(marketplace);
+      if (!account) return json({ error: "not configured" }, 404);
+      return json(publicMarketplaceView(account));
+    }
+    if (ctx.req.method === "POST") {
+      // Upsert credentials/settings. Merge semantics so the UI can save
+      // settings without re-typing secrets: credential keys overwrite
+      // individually (empty string deletes a key); settings shallow-merge
+      // (null deletes a key).
+      let body: Record<string, unknown>;
+      try {
+        body = await readJsonBody(ctx.req);
+      } catch (error) {
+        return json({ ok: false, error: errorMessage(error) }, 400);
+      }
+      const current = await db.getMarketplaceAccount(marketplace);
+      const environment =
+        String(body.environment ?? current?.environment ?? "sandbox") ===
+            "production"
+          ? "production"
+          : "sandbox";
+      const credentials = { ...(current?.credentials ?? {}) };
+      if (
+        body.credentials && typeof body.credentials === "object" &&
+        !Array.isArray(body.credentials)
+      ) {
+        for (
+          const [k, v] of Object.entries(
+            body.credentials as Record<string, unknown>,
+          )
+        ) {
+          const value = String(v ?? "").trim();
+          if (value) credentials[k] = value;
+          else delete credentials[k];
+        }
+      }
+      const settings = { ...(current?.settings ?? {}) };
+      if (
+        body.settings && typeof body.settings === "object" &&
+        !Array.isArray(body.settings)
+      ) {
+        Object.assign(settings, body.settings as Record<string, unknown>);
+        for (const k of Object.keys(settings)) {
+          if (settings[k] === null) delete settings[k];
+        }
+      }
+      const account = await db.upsertMarketplaceAccount(marketplace, {
+        environment,
+        credentials,
+        settings,
+        connected_at: current?.connected_at ?? null,
+        updated_by: String(body.operator ?? "").trim() || null,
+      });
+      return json({ ok: true, account: publicMarketplaceView(account) });
+    }
+    if (ctx.req.method === "DELETE") {
+      await db.deleteMarketplaceAccount(marketplace);
+      return new Response(null, { status: 204 });
+    }
+    return json({ error: "Method not allowed" }, 405);
+  } catch (error) {
+    return json({ error: errorMessage(error) }, 500);
+  }
+});
+
 // Unknown /api/* → JSON 404 (data-pimp convention), not the HTML default.
 app.all("/api/*", () => json({ error: "API endpoint not found" }, 404));
 
@@ -673,6 +870,17 @@ if (import.meta.main) {
     console.warn(
       "[lp-os] DATABASE_URL not set — DB-backed APIs will return 503",
     );
+  }
+  if (listingService) {
+    // Automatic listing: fires due auto-list schedules and (where opted in)
+    // lists cleared_to_sell samples. In-process interval — no new systems.
+    const intervalMs = Number(envValue("AUTO_LIST_INTERVAL_MS") ?? "300000") ||
+      300_000;
+    startAutoLister({
+      service: listingService,
+      intervalMs,
+      logger: (message) => console.log(`[lp-os] ${message}`),
+    });
   }
   const port = Number(envValue("PORT") ?? "8000") || 8000;
   await app.listen({ port });

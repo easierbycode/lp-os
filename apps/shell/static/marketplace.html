@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Marketplace · LP-OS</title>
+    <style>
+      :root { --bg:#0b0d11; --panel:#14181f; --panel-2:#1b1f28; --line:#2a313d; --text:#f5f7f9; --muted:#8b95a4; --faint:#6a727f; --accent:#e8650a; --accent-2:#f5832e; --accent-soft:rgba(232,101,10,.16); --green:#34d399; --red:#f87171; --amber:#fbbf24; }
+      * { box-sizing: border-box; }
+      body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; font-size:14px; }
+      .wrap { max-width:760px; margin:0 auto; padding:20px 18px 44px; }
+      .hd { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+      .logo { width:40px; height:40px; border-radius:12px; flex-shrink:0; display:grid; place-items:center; background:linear-gradient(150deg,#ed8740,var(--accent)); box-shadow:0 6px 18px rgba(232,101,10,.35); font-weight:700; color:#06130d; }
+      h1 { margin:0; font-size:19px; }
+      .sub { color:var(--muted); font-size:13px; margin:2px 0 16px; }
+      .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+      h2 { font-size:13px; margin:0 0 10px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; display:flex; align-items:center; gap:8px; }
+      label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+      input, select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:#0d1016; color:var(--text); font-size:13.5px; font-family:inherit; }
+      input:focus, select:focus { outline:none; border-color:var(--accent); }
+      .row { display:flex; gap:10px; }
+      .row > div { flex:1; min-width:0; }
+      .btns { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+      button { padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+      button:hover { border-color:var(--accent); }
+      button.primary { background:linear-gradient(135deg,var(--accent),var(--accent-2)); border:none; color:#1c0e04; }
+      button.danger:hover { border-color:var(--red); color:var(--red); }
+      button:disabled { opacity:.5; cursor:default; }
+      .chip { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; border-radius:99px; padding:3px 10px; border:1px solid var(--line); color:var(--muted); text-transform:none; letter-spacing:0; }
+      .chip .dot { width:7px; height:7px; border-radius:99px; background:var(--faint); }
+      .chip.ok { color:var(--green); border-color:rgba(52,211,153,.4); } .chip.ok .dot { background:var(--green); }
+      .chip.bad { color:var(--red); border-color:rgba(248,113,113,.4); } .chip.bad .dot { background:var(--red); }
+      .chip.warn { color:var(--amber); border-color:rgba(251,191,36,.4); } .chip.warn .dot { background:var(--amber); }
+      .msg { border-radius:8px; padding:9px 11px; margin-top:12px; font-size:12.5px; display:none; white-space:pre-wrap; word-break:break-word; }
+      .msg.show { display:block; }
+      .msg.ok { color:var(--green); background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.3); }
+      .msg.err { color:#ffb4a2; background:rgba(220,80,60,.12); border:1px solid rgba(220,80,60,.35); }
+      .muted { color:var(--muted); font-size:12.5px; }
+      details { margin-top:10px; font-size:12.5px; color:var(--muted); }
+      details summary { cursor:pointer; color:var(--accent-2); }
+      details ol { padding-left:18px; line-height:1.7; }
+      code { background:#0d1016; border:1px solid var(--line); border-radius:6px; padding:1px 6px; font-size:12px; }
+      .check { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:var(--text); }
+      .check input { width:auto; }
+      table { width:100%; border-collapse:collapse; font-size:12.5px; margin-top:8px; }
+      th { text-align:left; color:var(--faint); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.5px; padding:6px 8px; border-bottom:1px solid var(--line); }
+      td { padding:7px 8px; border-bottom:1px solid rgba(42,49,61,.5); vertical-align:top; }
+      td a { color:var(--accent-2); text-decoration:none; }
+      td a:hover { text-decoration:underline; }
+      .badge { display:inline-block; font-size:10.5px; font-weight:700; border-radius:6px; padding:2px 7px; text-transform:uppercase; letter-spacing:.4px; }
+      .badge.listed { color:#052e1e; background:var(--green); }
+      .badge.pending { color:#3a2a05; background:var(--amber); }
+      .badge.failed { color:#fff; background:#c2413a; }
+      .badge.ended, .badge.sold { color:var(--text); background:#3a4150; }
+      .tbl-top { display:flex; align-items:center; gap:10px; }
+      .tbl-top select { width:auto; }
+      .spacer { flex:1; }
+      .err-cell { color:var(--red); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .empty { color:var(--faint); text-align:center; padding:18px 0; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="hd">
+        <div class="logo">🏷</div>
+        <div>
+          <h1>Marketplace</h1>
+        </div>
+        <span class="spacer"></span>
+        <span id="conn-chip" class="chip"><span class="dot"></span><span id="conn-text">checking…</span></span>
+      </div>
+      <p class="sub">List samples for sale on eBay — the first of the initial three marketplaces. Credentials stay on this LP-OS server (Postgres), are never shown back whole, and are never written to the event log.</p>
+
+      <div class="card">
+        <h2>eBay connection <span id="env-chip" class="chip"><span class="dot"></span><span id="env-text">sandbox</span></span></h2>
+        <div class="row">
+          <div>
+            <label for="environment">Environment</label>
+            <select id="environment">
+              <option value="sandbox">Sandbox (test)</option>
+              <option value="production">Production (real listings)</option>
+            </select>
+          </div>
+          <div>
+            <label for="clientId">Client ID (App ID)</label>
+            <input id="clientId" autocomplete="off" spellcheck="false" placeholder="e.g. LPOS-…-PRD-…" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="clientSecret">Client Secret (Cert ID)</label>
+            <input id="clientSecret" type="password" autocomplete="off" placeholder="saved value kept unless replaced" />
+          </div>
+          <div>
+            <label for="refreshToken">Refresh token (~18 months)</label>
+            <input id="refreshToken" type="password" autocomplete="off" placeholder="v^1.1#i^1#r^1…" />
+          </div>
+        </div>
+        <label for="accessToken">Access token (optional — 2-hour token for a quick test; the refresh token is the durable path)</label>
+        <input id="accessToken" type="password" autocomplete="off" placeholder="v^1.1#i^1#p^3…" />
+        <p class="muted" id="saved-keys" style="margin:8px 0 0"></p>
+        <details>
+          <summary>Where do these come from?</summary>
+          <ol>
+            <li>Create a (free) developer account at <code>developer.ebay.com</code> and an application keyset — sandbox and production are separate keysets.</li>
+            <li><b>Client ID / Client Secret</b> are the keyset's App ID and Cert ID (Application Keys page).</li>
+            <li><b>Refresh token</b>: on the Application Keys page click <b>User Tokens</b> → <i>Get a User Token</i> → <b>OAuth</b> → sign in with your eBay seller account and agree. Grant the <code>sell.inventory</code> and <code>sell.account</code> scopes.</li>
+            <li>Save here, then <b>Verify</b> — LP-OS mints short-lived access tokens from the refresh token automatically.</li>
+          </ol>
+        </details>
+        <div class="btns">
+          <button id="save-conn" class="primary">Save connection</button>
+          <button id="verify">Verify</button>
+          <button id="disconnect" class="danger">Disconnect</button>
+        </div>
+        <div id="conn-msg" class="msg"></div>
+      </div>
+
+      <div class="card">
+        <h2>Listing defaults &amp; automatic listing</h2>
+        <div class="row">
+          <div>
+            <label for="postalCode">Ship-from ZIP (required to list)</label>
+            <input id="postalCode" placeholder="89104" />
+          </div>
+          <div>
+            <label for="city">City</label>
+            <input id="city" placeholder="Las Vegas" />
+          </div>
+          <div>
+            <label for="stateOrProvince">State</label>
+            <input id="stateOrProvince" placeholder="NV" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="defaultCreator">Default creator attribution</label>
+            <input id="defaultCreator" placeholder="@boosteddealsdaily" />
+          </div>
+          <div>
+            <label for="condition">Item condition</label>
+            <select id="condition">
+              <option value="NEW">New</option>
+              <option value="NEW_OTHER">New (open box)</option>
+              <option value="USED_EXCELLENT">Used – excellent</option>
+              <option value="USED_GOOD">Used – good</option>
+            </select>
+          </div>
+          <div>
+            <label for="shippingFlatCost">Flat shipping $ (default policy)</label>
+            <input id="shippingFlatCost" placeholder="9.99" />
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="autoListScheduled" checked />
+          <label for="autoListScheduled" style="margin:0; font-size:13px; color:var(--text)">Run <b>scheduled</b> auto-listings (imports with “auto-list after N days”)</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="autoListClearedToSell" />
+          <label for="autoListClearedToSell" style="margin:0; font-size:13px; color:var(--text)">Auto-list samples the moment they’re <b>Cleared to Sell</b></label>
+        </div>
+        <div class="btns">
+          <button id="save-settings" class="primary">Save settings</button>
+          <button id="run-pass">Run auto-list pass now</button>
+        </div>
+        <div id="settings-msg" class="msg"></div>
+      </div>
+
+      <div class="card">
+        <h2>List a sample now</h2>
+        <div class="row">
+          <div>
+            <label for="list-ref">Sample ID or TikTok product ID</label>
+            <input id="list-ref" placeholder="42 or 1729…001 (scan works)" />
+          </div>
+          <div>
+            <label for="list-price">Ask price $ (blank = best/current price)</label>
+            <input id="list-price" placeholder="40.00" />
+          </div>
+          <div>
+            <label for="list-creator">Creator (blank = auto-resolve)</label>
+            <input id="list-creator" placeholder="@handle" />
+          </div>
+        </div>
+        <div class="btns">
+          <button id="list-now" class="primary">List on eBay</button>
+        </div>
+        <div id="list-msg" class="msg"></div>
+      </div>
+
+      <div class="card">
+        <div class="tbl-top">
+          <h2 style="margin:0">Listings</h2>
+          <span class="spacer"></span>
+          <select id="filter-status">
+            <option value="">All statuses</option>
+            <option value="listed">Listed</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
+          <button id="refresh">Refresh</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Sample</th><th>Status</th><th>Price</th><th>Creator</th><th>Listing</th><th>Updated</th><th></th></tr>
+          </thead>
+          <tbody id="rows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+      const $ = (id) => document.getElementById(id);
+      const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      }[c]));
+      // Operator attribution: own ?user= (deep link) → the same-origin shell's
+      // ?user= → the shell's persisted user pick (shared same-origin storage).
+      const OPERATOR = new URLSearchParams(location.search).get("user") ||
+        (() => {
+          try {
+            return new URLSearchParams(parent.location.search).get("user") ||
+              localStorage.getItem("lpos-os-user") || "";
+          } catch { return ""; }
+        })();
+
+      let account = null; // public view from GET /api/marketplaces/ebay
+
+      function showMsg(id, text, ok) {
+        const el = $(id);
+        el.textContent = text;
+        el.className = `msg show ${ok ? "ok" : "err"}`;
+      }
+      function hideMsg(id) { $(id).className = "msg"; }
+
+      function setChip(el, textEl, text, cls) {
+        el.className = `chip ${cls}`;
+        textEl.textContent = text;
+      }
+
+      async function api(path, init) {
+        const res = await fetch(path, init && {
+          ...init,
+          headers: { "content-type": "application/json", ...(init.headers || {}) },
+        });
+        let body = null;
+        try { body = await res.json(); } catch { /* 204 etc. */ }
+        return { status: res.status, body };
+      }
+
+      function renderAccount() {
+        const connected = !!(account && account.connected);
+        setChip($("conn-chip"), $("conn-text"),
+          connected
+            ? `connected${account.connected_at ? " · verified " + new Date(account.connected_at).toLocaleDateString() : ""}`
+            : account ? "credentials incomplete" : "not connected",
+          connected ? "ok" : account ? "warn" : "bad");
+        const env = (account && account.environment) || $("environment").value;
+        setChip($("env-chip"), $("env-text"), env, env === "production" ? "warn" : "");
+        if (!account) { $("saved-keys").textContent = ""; return; }
+        $("environment").value = account.environment;
+        $("saved-keys").textContent = account.credentialKeys.length
+          ? `Saved credentials: ${account.credentialKeys.join(", ")} (values never re-shown — retype to replace, save an empty field to keep it)`
+          : "No credentials saved yet.";
+        const s = account.settings || {};
+        const loc = s.location || {};
+        if (loc.postalCode) $("postalCode").value = loc.postalCode;
+        if (loc.city) $("city").value = loc.city;
+        if (loc.stateOrProvince) $("stateOrProvince").value = loc.stateOrProvince;
+        if (s.defaultCreator) $("defaultCreator").value = s.defaultCreator;
+        if (s.condition) $("condition").value = s.condition;
+        if (s.shippingFlatCost) $("shippingFlatCost").value = s.shippingFlatCost;
+        $("autoListScheduled").checked = s.autoListScheduled !== false;
+        $("autoListClearedToSell").checked = s.autoListClearedToSell === true;
+      }
+
+      async function loadAccount() {
+        const res = await api("/api/marketplaces/ebay");
+        account = res.status === 200 ? res.body : null;
+        if (res.status === 503) {
+          setChip($("conn-chip"), $("conn-text"), "no database", "bad");
+          return;
+        }
+        renderAccount();
+      }
+
+      function credentialPatch() {
+        // Only send fields the user typed; blank fields keep saved values.
+        const patch = {};
+        for (const key of ["clientId", "clientSecret", "refreshToken", "accessToken"]) {
+          const value = $(key).value.trim();
+          if (value) patch[key] = value;
+        }
+        return patch;
+      }
+
+      function settingsPatch() {
+        return {
+          location: {
+            country: "US",
+            postalCode: $("postalCode").value.trim(),
+            city: $("city").value.trim(),
+            stateOrProvince: $("stateOrProvince").value.trim(),
+          },
+          defaultCreator: $("defaultCreator").value.trim(),
+          condition: $("condition").value,
+          shippingFlatCost: $("shippingFlatCost").value.trim(),
+          autoListScheduled: $("autoListScheduled").checked,
+          autoListClearedToSell: $("autoListClearedToSell").checked,
+        };
+      }
+
+      async function saveAccount(includeCredentials) {
+        const body = {
+          environment: $("environment").value,
+          settings: settingsPatch(),
+          operator: OPERATOR,
+        };
+        if (includeCredentials) body.credentials = credentialPatch();
+        const res = await api("/api/marketplaces/ebay", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        if (res.status === 200 && res.body && res.body.ok) {
+          account = res.body.account;
+          renderAccount();
+          for (const key of ["clientId", "clientSecret", "refreshToken", "accessToken"]) {
+            $(key).value = "";
+          }
+          return true;
+        }
+        throw new Error((res.body && (res.body.error || res.body.detail)) || `HTTP ${res.status}`);
+      }
+
+      $("save-conn").addEventListener("click", async () => {
+        hideMsg("conn-msg");
+        try {
+          await saveAccount(true);
+          showMsg("conn-msg", "Saved. Click Verify to test the connection.", true);
+        } catch (error) {
+          showMsg("conn-msg", `Save failed: ${error.message}`, false);
+        }
+      });
+
+      $("verify").addEventListener("click", async () => {
+        hideMsg("conn-msg");
+        $("verify").disabled = true;
+        try {
+          const res = await api("/api/marketplaces/ebay/verify", { method: "POST" });
+          const ok = !!(res.body && res.body.ok);
+          showMsg("conn-msg", (res.body && res.body.detail) || `HTTP ${res.status}`, ok);
+          await loadAccount();
+        } catch (error) {
+          showMsg("conn-msg", `Verify failed: ${error.message}`, false);
+        } finally {
+          $("verify").disabled = false;
+        }
+      });
+
+      $("disconnect").addEventListener("click", async () => {
+        if (!confirm("Remove the saved eBay credentials from this LP-OS server?")) return;
+        try {
+          const res = await fetch("/api/marketplaces/ebay", { method: "DELETE" });
+          if (!res.ok && res.status !== 204) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          account = null;
+          renderAccount();
+          showMsg("conn-msg", "eBay disconnected — saved credentials deleted.", true);
+        } catch (error) {
+          showMsg("conn-msg", `Disconnect failed: ${error.message}`, false);
+        }
+      });
+
+      $("save-settings").addEventListener("click", async () => {
+        hideMsg("settings-msg");
+        try {
+          await saveAccount(false);
+          showMsg("settings-msg", "Settings saved.", true);
+        } catch (error) {
+          showMsg("settings-msg", `Save failed: ${error.message}`, false);
+        }
+      });
+
+      $("run-pass").addEventListener("click", async () => {
+        hideMsg("settings-msg");
+        $("run-pass").disabled = true;
+        try {
+          const res = await api("/api/listings/run-due", { method: "POST" });
+          const body = res.body || {};
+          if (res.status !== 200) throw new Error(body.error || `HTTP ${res.status}`);
+          showMsg("settings-msg", body.message || "pass complete", true);
+          await loadListings();
+          notifyShell(body.message);
+        } catch (error) {
+          showMsg("settings-msg", `Auto-list pass failed: ${error.message}`, false);
+        } finally {
+          $("run-pass").disabled = false;
+        }
+      });
+
+      $("list-now").addEventListener("click", async () => {
+        hideMsg("list-msg");
+        const ref = $("list-ref").value.trim();
+        if (!ref) { showMsg("list-msg", "Enter a sample ID or TikTok product ID.", false); return; }
+        const body = { marketplace: "ebay", operator: OPERATOR };
+        if (/^\d{18,19}$/.test(ref)) body.productId = ref; else body.sampleId = ref;
+        const price = $("list-price").value.trim();
+        if (price) body.askPrice = price;
+        const creator = $("list-creator").value.trim();
+        if (creator) body.creator = creator;
+        $("list-now").disabled = true;
+        try {
+          const res = await api("/api/listings", { method: "POST", body: JSON.stringify(body) });
+          const result = res.body || {};
+          if (res.status !== 200) throw new Error(result.error || `HTTP ${res.status}`);
+          showMsg("list-msg", result.message || (result.ok ? "Listed." : result.error), !!result.ok);
+          await loadListings();
+          if (result.ok) notifyShell(result.message);
+        } catch (error) {
+          showMsg("list-msg", `Listing failed: ${error.message}`, false);
+        } finally {
+          $("list-now").disabled = false;
+        }
+      });
+
+      function notifyShell(message) {
+        // Same-origin shell window relays a refresh into Inventory panes and
+        // shows a taskbar toast ({source:"lp-os-marketplace"} handler, os.js).
+        try {
+          parent.postMessage(
+            { source: "lp-os-marketplace", type: "listing-updated", message: message || "" },
+            location.origin,
+          );
+        } catch { /* not embedded */ }
+      }
+
+      async function retryListing(sampleId, btn) {
+        if (btn) btn.disabled = true; // double-tap = two real publishes
+        try {
+          const res = await api("/api/listings", {
+            method: "POST",
+            body: JSON.stringify({ sampleId, marketplace: "ebay", operator: OPERATOR }),
+          });
+          const result = res.body || {};
+          showMsg("list-msg", result.message || result.error || `HTTP ${res.status}`, !!result.ok);
+          await loadListings();
+          if (result.ok) notifyShell(result.message);
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      async function loadListings() {
+        const status = $("filter-status").value;
+        const res = await api(`/api/listings?limit=100${status ? `&status=${status}` : ""}`);
+        const tbody = $("rows");
+        if (res.status !== 200 || !Array.isArray(res.body)) {
+          tbody.innerHTML = `<tr><td colspan="7" class="empty">${esc((res.body && res.body.error) || "load failed")}</td></tr>`;
+          return;
+        }
+        if (!res.body.length) {
+          tbody.innerHTML = `<tr><td colspan="7" class="empty">No listings yet — list a sample above, or import with auto-list.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = res.body.map((l) => {
+          const status = esc(l.status);
+          const name = esc(l.sample_name || `sample ${l.sample_id ?? "?"}`);
+          const price = l.ask_price != null ? `$${Number(l.ask_price).toFixed(2)}` : "";
+          const updated = l.updated_at ? new Date(l.updated_at).toLocaleString() : "";
+          const link = l.listing_url
+            ? `<a href="${esc(l.listing_url)}" target="_blank" rel="noopener noreferrer">${esc(l.external_id || "view")}</a>`
+            : (l.error ? `<span class="err-cell" title="${esc(l.error)}">${esc(l.error)}</span>` : "—");
+          const retry = status === "failed"
+            ? `<button data-retry="${esc(l.sample_id)}">Retry</button>`
+            : "";
+          return `<tr>
+            <td>${name}<div class="muted">#${esc(l.sample_id)} · ${esc(l.source || "")}</div></td>
+            <td><span class="badge ${status}">${status}</span></td>
+            <td>${price}</td>
+            <td>${esc(l.creator || "")}</td>
+            <td>${link}</td>
+            <td class="muted">${esc(updated)}</td>
+            <td>${retry}</td>
+          </tr>`;
+        }).join("");
+        for (const btn of tbody.querySelectorAll("button[data-retry]")) {
+          btn.addEventListener("click", () => retryListing(btn.dataset.retry, btn));
+        }
+      }
+
+      $("refresh").addEventListener("click", loadListings);
+      $("filter-status").addEventListener("change", loadListings);
+      $("environment").addEventListener("change", () => {
+        setChip($("env-chip"), $("env-text"), $("environment").value,
+          $("environment").value === "production" ? "warn" : "");
+      });
+
+      loadAccount();
+      loadListings();
+      setInterval(loadListings, 15000); // pick up auto-lister results
+    </script>
+  </body>
+</html>

@@ -208,6 +208,15 @@ export type ListingInput = SampleRef & {
   listingUrl?: string;
   note?: string;
   operator?: string;
+  // Set by @lp-os/marketplace when the listing went through a real
+  // marketplace API (vs the manual analytics-only path). All optional and
+  // additive — existing callers/events are unchanged without them.
+  /** sample_source override (e.g. "marketplace-api"); default "skill-listing". */
+  source?: string;
+  /** Postgres listings.id of the row this event describes. */
+  listingId?: number | string;
+  /** Marketplace-side listing id (eBay listingId). */
+  externalId?: string;
 };
 
 export type ListingResult = {

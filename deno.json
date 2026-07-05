@@ -5,7 +5,8 @@
     "./packages/db",
     "./packages/relay",
     "./packages/graylog",
-    "./packages/lifecycle"
+    "./packages/lifecycle",
+    "./packages/marketplace"
   ],
   "nodeModulesDir": "auto",
   "imports": {
@@ -14,7 +15,7 @@
   "tasks": {
     "dev": "deno task --cwd apps/shell dev",
     "dev:member": "deno task --cwd apps/member dev",
-    "check": "deno check apps/shell packages/db packages/relay packages/graylog packages/lifecycle",
+    "check": "deno check apps/shell packages/db packages/relay packages/graylog packages/lifecycle packages/marketplace",
     "test": "deno test -A packages apps/shell",
     "migrate": "deno run -A packages/db/scripts/migrate.ts",
     "backfill:graylog": "deno run -A packages/graylog/scripts/backfill.ts"

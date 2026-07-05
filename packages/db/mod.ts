@@ -175,6 +175,150 @@ function makeTableApi(table: string): TableApi {
 export const Samples: TableApi = makeTableApi("samples");
 export const Bundles: TableApi = makeTableApi("bundles");
 export const Transactions: TableApi = makeTableApi("transactions");
+export const Listings: TableApi = makeTableApi("listings");
+
+/* ------------------------------------------------- marketplace accounts -- */
+// marketplace_accounts is keyed by marketplace name (no serial id), so it gets
+// dedicated helpers instead of a TableApi (whose update/delete assume an `id`
+// column). credentials/settings are stored whole — merge semantics belong to
+// the caller, which reads the row, merges, and upserts the full objects.
+
+export type MarketplaceAccount = {
+  marketplace: string;
+  environment: string;
+  credentials: Record<string, unknown>;
+  settings: Record<string, unknown>;
+  connected_at: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+function toMarketplaceAccount(row: Row): MarketplaceAccount {
+  return serializeRow(row) as unknown as MarketplaceAccount;
+}
+
+export async function getMarketplaceAccount(
+  marketplace: string,
+): Promise<MarketplaceAccount | null> {
+  const r = await query(
+    `select * from public.marketplace_accounts where marketplace = $1`,
+    [marketplace],
+  );
+  const row = r.rows[0] as Row | undefined;
+  return row ? toMarketplaceAccount(row) : null;
+}
+
+export async function listMarketplaceAccounts(): Promise<MarketplaceAccount[]> {
+  const r = await query(
+    `select * from public.marketplace_accounts order by marketplace`,
+  );
+  return (r.rows as Row[]).map(toMarketplaceAccount);
+}
+
+export async function upsertMarketplaceAccount(
+  marketplace: string,
+  data: {
+    environment: string;
+    credentials: Record<string, unknown>;
+    settings: Record<string, unknown>;
+    connected_at?: string | null;
+    updated_by?: string | null;
+  },
+): Promise<MarketplaceAccount> {
+  const r = await query(
+    `insert into public.marketplace_accounts
+       (marketplace, environment, credentials, settings, connected_at, updated_by)
+     values ($1, $2, $3, $4, $5, $6)
+     on conflict (marketplace) do update set
+       environment  = excluded.environment,
+       credentials  = excluded.credentials,
+       settings     = excluded.settings,
+       connected_at = excluded.connected_at,
+       updated_by   = excluded.updated_by,
+       updated_at   = now()
+     returning *`,
+    [
+      marketplace,
+      data.environment,
+      JSON.stringify(data.credentials ?? {}),
+      JSON.stringify(data.settings ?? {}),
+      data.connected_at ?? null,
+      data.updated_by ?? null,
+    ],
+  );
+  return toMarketplaceAccount(r.rows[0] as Row);
+}
+
+/** Stamp a successful live credential check WITHOUT rewriting the row —
+ * a read-modify-write here could silently revert a concurrent credential
+ * save from the Marketplace window. */
+export async function touchMarketplaceAccountVerified(
+  marketplace: string,
+): Promise<MarketplaceAccount | null> {
+  const r = await query(
+    `update public.marketplace_accounts
+     set connected_at = now(), updated_at = now()
+     where marketplace = $1
+     returning *`,
+    [marketplace],
+  );
+  const row = r.rows[0] as Row | undefined;
+  return row ? toMarketplaceAccount(row) : null;
+}
+
+export async function deleteMarketplaceAccount(
+  marketplace: string,
+): Promise<boolean> {
+  const r = await query(
+    `delete from public.marketplace_accounts where marketplace = $1`,
+    [marketplace],
+  );
+  return (r.rowCount ?? 0) > 0;
+}
+
+/* -------------------------------------------------- listings joined read -- */
+
+/** Listing rows joined with the sample columns UIs render alongside them.
+ * Filters are equality matches; limit is clamped like every other read. */
+export async function listListingsWithSamples(
+  filters: {
+    sample_id?: number | string;
+    marketplace?: string;
+    status?: string;
+  } = {},
+  limit?: number,
+): Promise<Row[]> {
+  const values: unknown[] = [];
+  const parts: string[] = [];
+  if (filters.sample_id !== undefined && filters.sample_id !== null) {
+    values.push(filters.sample_id);
+    parts.push(`l.sample_id = $${values.length}`);
+  }
+  if (filters.marketplace) {
+    values.push(filters.marketplace);
+    parts.push(`l.marketplace = $${values.length}`);
+  }
+  if (filters.status) {
+    values.push(filters.status);
+    parts.push(`l.status = $${values.length}`);
+  }
+  const where = parts.length ? `where ${parts.join(" and ")}` : "";
+  const lim = safeLimit(limit) ?? 200;
+  const r = await query(
+    `select l.*,
+            s.name       as sample_name,
+            s.qr_code    as sample_qr_code,
+            s.picture_url as sample_picture_url,
+            s.status     as sample_status
+     from public.listings l
+     left join public.samples s on s.id = l.sample_id
+     ${where}
+     order by l.created_at desc, l.id desc
+     limit ${lim}`,
+    values,
+  );
+  return (r.rows as Row[]).map(serializeRow);
+}
 
 let schemaPromise: Promise<void> | null = null;
 
