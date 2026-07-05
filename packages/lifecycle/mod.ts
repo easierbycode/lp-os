@@ -1056,6 +1056,11 @@ export function createLifecycle(
     const name = row ? String(row.name ?? "").trim() || null : null;
     const listingUrl = String(input.listingUrl || "").trim() || null;
     const note = String(input.note || "").trim();
+    // Real-API extras (@lp-os/marketplace): additive fields, absent on the
+    // manual analytics-only path so existing event shapes stay byte-identical.
+    const listingId = String(input.listingId ?? "").trim() || null;
+    const externalId = String(input.externalId || "").trim() || null;
+    const sampleSource = String(input.source || "").trim() || "skill-listing";
     const now = new Date().toISOString();
 
     const graylog = await sendEvent(
@@ -1073,14 +1078,18 @@ export function createLifecycle(
           listingUrl: listingUrl || undefined,
           listedAt: now,
           note: note || undefined,
+          listingId: listingId || undefined,
+          externalId: externalId || undefined,
         }),
         creator,
         ask_price_num: askPrice,
         marketplace,
         product_id: productId ?? undefined,
         sample_id: sampleId != null ? String(sampleId) : undefined,
+        listing_id: listingId ?? undefined,
+        external_listing_id: externalId ?? undefined,
         sample_event: "listed",
-        sample_source: "skill-listing",
+        sample_source: sampleSource,
       },
     );
 
