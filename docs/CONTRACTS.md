@@ -434,6 +434,65 @@ derived. `roles.ts` mirrors flag logic server-side and exports
   domain exists).
 - `extension-creator-demo` is dropped.
 
+## Marketplace listings (@lp-os/marketplace) **[decided here]**
+
+Real marketplace listing of samples — eBay first of the initial three
+marketplaces. Post-phase-8 feature work; names fixed here.
+
+- Package `packages/marketplace` = `@lp-os/marketplace`, same
+  compile-standalone structural-deps pattern as `@lp-os/lifecycle`
+  (`createListingService({db, store, lifecycle, getAccount, listAccounts})`).
+  eBay adapter behind a `MarketplaceClient` interface
+  (`createEbayClient({environment, credentials, settings, fetchImpl?})`) —
+  Sell Inventory API flow: inventory_item → offer → publish, with merchant
+  location + business policies auto-provisioned on first use.
+- Tables (migration `0002_marketplace.sql`, mirrored in `ensureSchema()`):
+  - `listings` — the Postgres truth for current listing status
+    (`pending → listed → ended|sold`, or `failed`); columns include
+    sample_id FK, marketplace, status, source (`manual|schedule|status-auto`),
+    sku (`lpos-<sampleId>`), offer_id, external_id (eBay listingId),
+    listing_url, ask_price, currency, creator, operator, error, listed_at.
+    Exported as `Listings: TableApi`; joined read
+    `listListingsWithSamples(filters, limit)`.
+  - `marketplace_accounts` — single-tenant per marketplace (login is mocked):
+    PK marketplace, environment (`sandbox|production`), credentials jsonb
+    (eBay: clientId/clientSecret/refreshToken/accessToken), settings jsonb
+    (location, defaultCreator, condition, shippingFlatCost, autoListScheduled,
+    autoListClearedToSell, autoListMaxPerPass, policy-id overrides).
+    Helpers: `getMarketplaceAccount` / `listMarketplaceAccounts` /
+    `upsertMarketplaceAccount` / `deleteMarketplaceAccount`. Credential VALUES
+    never leave the server: API views expose key names only, and credentials
+    are never written to graylog_messages.
+- Shell routes: `GET|POST /api/listings` (GET = joined status rows with
+  `sample_id`/`marketplace`/`status`/`limit` filters; POST = on-demand publish,
+  validation → 400 `{ok:false,error}`, remote publish failure → 200
+  `{ok:false, error, listing}`), `POST /api/listings/run-due` (one auto-list
+  pass now), `GET /api/marketplaces`, `GET|POST|DELETE
+  /api/marketplaces/:marketplace` (POST merges credentials per-key + settings
+  shallow), `POST /api/marketplaces/:marketplace/verify` (live check, stamps
+  connected_at). Window page: `GET /marketplace` → `static/marketplace.html`
+  (FOLDERS app id `marketplace`, RBAC flag `app.marketplace` — admin via `*`,
+  warehouse true, creator denied).
+- Automatic listing = `startAutoLister` in-process interval in apps/shell boot
+  (env `AUTO_LIST_INTERVAL_MS`, default 300000): each pass (a) fires due
+  `fetchDueListingSchedules()` intents (success or permanent failure →
+  `markListingScheduleDone`; transient → retried next pass) and (b) when
+  `settings.autoListClearedToSell === true`, lists `cleared_to_sell` samples
+  that have no listings row yet (one automatic attempt per sample+marketplace).
+- Events keep the lifecycle conventions (source `thirsty-store-kiosk`, one
+  `*_json` container + flat scalars): success reuses `recordSampleListing`'s
+  `sample_event:"listed"` shape with additive fields `listing_id`,
+  `external_listing_id` and `sample_source` tokens `marketplace-api` (manual) /
+  `marketplace-cron` (schedule) / `marketplace-auto` (status-auto); failures
+  are `sample_event:"listing_failed"` with `listing_error_json` — so
+  `sample_event:listed` never matches failures and existing skill queries are
+  unchanged.
+- Env vars added to the complete set: `AUTO_LIST_INTERVAL_MS` (optional,
+  auto-list pass interval in ms, default 300000). eBay credentials are NOT env
+  vars — they live in `marketplace_accounts`, entered through the Marketplace
+  window.
+- Shipping is scoped (not built) in `docs/SHIPPING_SCOPE.md`.
+
 ## Skills (.claude/skills/)
 
 Seven skills: `ebay-listing`, `sample-e2e`, `sample-lifecycle`,

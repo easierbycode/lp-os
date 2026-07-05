@@ -30,6 +30,9 @@ follows.
 - `packages/relay` — scan-socket server module + `ScanRelay` browser client.
 - `packages/graylog` — GELF-shaped ingest, mini-Lucene→SQL search, ndjson
   backfill.
+- `packages/marketplace` — marketplace listing of samples (eBay Sell API
+  adapter, listing service, in-process auto-lister); credentials live in the
+  `marketplace_accounts` table, entered via the shell's Marketplace window.
 - `extension/` — merged Chrome extension (agency + seller behaviors, role-gated
   by `?user=`).
 - `.claude/skills/` — consolidated agent skills.

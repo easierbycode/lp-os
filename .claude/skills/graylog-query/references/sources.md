@@ -123,6 +123,19 @@ themselves are in the message body / detail blob).
 Fields: `page`, `campaign_id`, `status`, `status_count`, `scrapedAt`,
 `tabs_count`, `tabs_json`, `sellers_count`, `sellers_json`.
 
+### `source:thirsty-store-kiosk` — sample lifecycle + marketplace listings
+
+The write-path events (status/sold/assign/intake/import/listing) documented in
+`sample-lifecycle/references/lifecycle-events.md`. Discriminate with
+`sample_event:` (`listed`, `listing_failed`, `listing_scheduled`,
+`listing_fired`, `assigned`, `imported`, `agency_intake`) and `sample_status:`.
+Since the eBay API integration, real-API listings add `listing_id` /
+`external_listing_id` flat fields and `sample_source` values `marketplace-api`,
+`marketplace-cron`, `marketplace-auto`; publish failures are
+`sample_event:listing_failed` with a `listing_error_json` blob (so
+`sample_event:listed` still means success only). Current listing STATUS lives
+in Postgres (`GET /api/listings`); Graylog holds the history.
+
 ---
 
 ## "All known sources" filter
