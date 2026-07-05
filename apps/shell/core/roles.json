@@ -1,0 +1,63 @@
+{
+  "defaultUser": "dj",
+  "flags": [
+    { "id": "folder.apps", "label": "Apps folder" },
+    { "id": "folder.demos", "label": "Demos folder" },
+    { "id": "folder.member", "label": "Member folder" },
+    { "id": "app.productAnalysis", "label": "Product Analysis app" },
+    { "id": "app.inventory", "label": "Inventory (LP Sample Tracker)" },
+    { "id": "app.kiosk", "label": "Kiosk / checkout" },
+    { "id": "app.installExtension", "label": "Install Extension helper" },
+    { "id": "app.scanner", "label": "Scanner (remote barcode scanner)" },
+    { "id": "app.graylog", "label": "Graylog log search" },
+    { "id": "ops.debugCounts", "label": "Row-count debug endpoint" },
+    {
+      "id": "ops.checkoutAlerts",
+      "label": "Stakeholder for stale-checkout alerts"
+    }
+  ],
+  "roles": [
+    {
+      "id": "admin",
+      "name": "Admin",
+      "default_home": [],
+      "flags": { "*": true }
+    },
+    {
+      "id": "creator",
+      "name": "Creator",
+      "default_home": [["Member/App", "left"], ["Member/Web", "right"]],
+      "flags": { "folder.member": true }
+    },
+    {
+      "id": "warehouse",
+      "name": "Warehouse",
+      "default_home": [
+        ["Apps/Inventory?status=cleared_to_sell", "left"],
+        ["Apps/Kiosk", "right"]
+      ],
+      "flags": {
+        "folder.apps": true,
+        "app.inventory": true,
+        "app.kiosk": true,
+        "app.installExtension": true,
+        "app.scanner": true,
+        "app.graylog": false,
+        "app.productAnalysis": false,
+        "folder.demos": false,
+        "folder.member": false,
+        "ops.debugCounts": false,
+        "ops.checkoutAlerts": true
+      }
+    }
+  ],
+  "users": [
+    { "id": "dj", "name": "DJ", "role": "admin" },
+    { "id": "ka", "name": "Karl", "role": "warehouse" },
+    {
+      "id": "@boosteddealsdaily",
+      "name": "@boosteddealsdaily",
+      "role": "creator"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@lp-os/shell",
+  "version": "0.1.0",
+  "exports": "./main.ts",
+  "tasks": {
+    "dev": "deno run -A --watch main.ts",
+    "start": "deno run -A main.ts"
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@^1.0.0",
+    "@std/path": "jsr:@std/path@^1.0.0",
+    "fresh": "jsr:@fresh/core@^2.3.0"
+  }
+}
