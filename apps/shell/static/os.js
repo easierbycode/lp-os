@@ -61,6 +61,9 @@ const ICON_GRADIENTS = `
       <linearGradient id="g-gray" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" stop-color="#94a3b8"/><stop offset="1" stop-color="#475569"/>
       </linearGradient>
+      <linearGradient id="g-market" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#6366f1"/>
+      </linearGradient>
     </defs>
   </svg>`;
 
@@ -200,6 +203,16 @@ const ICONS = {
       <rect x="24" y="28" width="16" height="3" rx="1.5" fill="#fb7185" opacity=".55"/>
       <rect x="24" y="35" width="16" height="3" rx="1.5" fill="#fb7185" opacity=".55"/>
       <rect x="24" y="42" width="10" height="3" rx="1.5" fill="#fb7185" opacity=".55"/>
+    </svg>`,
+
+  // Price-tag glyph on a sky/indigo tile — marketplace listings (eBay first).
+  marketplace: `
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#g-market)"/>
+      <rect x="6" y="6" width="52" height="26" rx="14" fill="#fff" opacity=".12"/>
+      <path d="M31 15h13a5 5 0 0 1 5 5v13a4 4 0 0 1-1.17 2.83L34.9 48.76a4 4 0 0 1-5.66 0L16.24 35.76a4 4 0 0 1 0-5.66L29.17 17.17A4 4 0 0 1 31 15Z" fill="#fff"/>
+      <circle cx="41.5" cy="22.5" r="3.2" fill="#4f46e5"/>
+      <text x="31" y="40" font-family="Space Grotesk, sans-serif" font-size="15" font-weight="700" fill="#4f46e5" text-anchor="middle">$</text>
     </svg>`,
 };
 
@@ -362,6 +375,18 @@ const FOLDERS = [
         url: "/install",
         width: 600,
         height: 720,
+      },
+      {
+        id: "marketplace",
+        name: "Marketplace",
+        icon: ICONS.marketplace,
+        flag: "app.marketplace",
+        // Same-origin marketplace window: eBay API credentials prompt,
+        // auto-list settings, on-demand "List on eBay", and the listings
+        // status table (served by the shell at /marketplace).
+        url: "/marketplace",
+        width: 800,
+        height: 860,
       },
     ],
   },
@@ -1633,6 +1658,38 @@ globalThis.addEventListener("message", (e) => {
     }
   }
   flashStatus("Refreshing Inventory");
+});
+
+// Same-origin relay from the Marketplace window (/marketplace): a listing was
+// created/changed (on-demand or an auto-list pass) → toast it and refresh
+// every Inventory pane, exactly like the samples-import import relay above.
+globalThis.addEventListener("message", (e) => {
+  if (e.origin !== location.origin) return;
+  const data = e.data;
+  if (!data || data.source !== "lp-os-marketplace") return;
+  if (data.type !== "listing-updated") return;
+  const refreshViaMessage = INVENTORY_ORIGIN === location.origin ||
+    location.origin === "https://thirsty.store";
+  if (refreshViaMessage) {
+    for (const inv of windowsForApp("inventory")) {
+      const frame = inv.el.querySelector("iframe");
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage(
+          { source: "thirsty-os", type: "refresh-inventory" },
+          INVENTORY_ORIGIN,
+        );
+      }
+    }
+  } else {
+    for (const inv of windowsForApp("inventory")) {
+      const frame = inv.el.querySelector("iframe");
+      if (frame) frame.src = frame.getAttribute("src") || frame.src;
+    }
+  }
+  const note = typeof data.message === "string" && data.message
+    ? data.message.slice(0, 80)
+    : "Marketplace listing updated";
+  flashStatus(note);
 });
 
 /* ------------------------------------------------------------ scan link -- */

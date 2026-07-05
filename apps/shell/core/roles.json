@@ -10,6 +10,7 @@
     { "id": "app.installExtension", "label": "Install Extension helper" },
     { "id": "app.scanner", "label": "Scanner (remote barcode scanner)" },
     { "id": "app.graylog", "label": "Graylog log search" },
+    { "id": "app.marketplace", "label": "Marketplace listings (eBay)" },
     { "id": "ops.debugCounts", "label": "Row-count debug endpoint" },
     {
       "id": "ops.checkoutAlerts",
@@ -42,6 +43,7 @@
         "app.kiosk": true,
         "app.installExtension": true,
         "app.scanner": true,
+        "app.marketplace": true,
         "app.graylog": false,
         "app.productAnalysis": false,
         "folder.demos": false,
