@@ -1,0 +1,10 @@
+{
+  "name": "@lp-os/graylog",
+  "version": "0.1.0",
+  "exports": "./mod.ts",
+  "imports": {
+    "pg": "npm:pg@^8.13.0",
+    "@types/pg": "npm:@types/pg@^8.11.10",
+    "@std/assert": "jsr:@std/assert@^1.0.6"
+  }
+}
