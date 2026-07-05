@@ -1,0 +1,6 @@
+node_modules/
+.svelte-kit/
+.deno-deploy/
+build/
+dist/
+vite.config.ts.timestamp-*

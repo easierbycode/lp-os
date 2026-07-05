@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+
+/* Global reset ported from data-pimp member/assets/styles.css.
+   Most styling lives inside each component's scoped <style> block. */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+* {
+	margin: 0;
+}
+html,
+body {
+	height: 100%;
+	/* Render native UI (scrollbars, form controls) dark to match the member
+	   App view; without this the dark page gets a light default scrollbar. */
+	color-scheme: dark;
+}
+body {
+	font-family: 'Avenir Next', 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+	background: #1a1916;
+	color: #f2f1ed;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+button {
+	color: inherit;
+	font-family: inherit;
+}
+button,
+[role='button'] {
+	cursor: pointer;
+}
+img,
+svg {
+	display: block;
+}
+a {
+	color: inherit;
+	text-decoration: none;
+}

@@ -1,0 +1,32 @@
+{
+  "tasks": {
+    "dev": "deno run -A npm:vite dev",
+    "build": "deno run -A npm:@sveltejs/kit/svelte-kit sync && deno run -A npm:vite build",
+    "preview": "deno run -A npm:vite preview",
+    "check": "deno run -A npm:@sveltejs/kit/svelte-kit sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json"
+  },
+  "imports": {
+    "events": "node:events",
+    "fs/promises": "node:fs/promises",
+    "util": "node:util",
+    "util/types": "node:util/types",
+    "crypto": "node:crypto",
+    "dns": "node:dns",
+    "dns/promises": "node:dns/promises",
+    "fs": "node:fs",
+    "net": "node:net",
+    "tls": "node:tls",
+    "path": "node:path",
+    "stream": "node:stream",
+    "stream/promises": "node:stream/promises",
+    "string_decoder": "node:string_decoder",
+    "buffer": "node:buffer",
+    "assert": "node:assert",
+    "url": "node:url",
+    "querystring": "node:querystring",
+    "os": "node:os",
+    "zlib": "node:zlib",
+    "tty": "node:tty",
+    "timers": "node:timers"
+  }
+}
