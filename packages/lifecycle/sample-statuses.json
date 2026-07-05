@@ -1,0 +1,82 @@
+[
+  {
+    "value": "available",
+    "label": "Available",
+    "kind": "status",
+    "exclusive": true,
+    "appliesTo": ["tiktok", "datapimp"],
+    "icon": null,
+    "palette": "green",
+    "order": 1
+  },
+  {
+    "value": "checked_out",
+    "label": "Checked Out",
+    "kind": "status",
+    "exclusive": true,
+    "appliesTo": ["tiktok", "datapimp"],
+    "icon": null,
+    "palette": "amber",
+    "order": 2
+  },
+  {
+    "value": "reserved",
+    "label": "Reserved",
+    "kind": "status",
+    "exclusive": true,
+    "appliesTo": ["tiktok", "datapimp"],
+    "icon": null,
+    "palette": "blue",
+    "order": 3
+  },
+  {
+    "value": "cleared_to_sell",
+    "label": "Cleared to Sell",
+    "kind": "status",
+    "exclusive": true,
+    "appliesTo": ["tiktok", "datapimp"],
+    "icon": "Sprout",
+    "palette": "green",
+    "order": 4
+  },
+  {
+    "value": "discontinued",
+    "label": "Discontinued",
+    "kind": "status",
+    "exclusive": true,
+    "appliesTo": ["datapimp"],
+    "icon": null,
+    "palette": "slate",
+    "order": 5
+  },
+  {
+    "value": "fire_sale",
+    "label": "Fire Sale",
+    "kind": "badge",
+    "exclusive": false,
+    "appliesTo": ["tiktok", "datapimp"],
+    "icon": "Flame",
+    "palette": "orange-red",
+    "order": 6
+  },
+  {
+    "value": "lowest_price",
+    "label": "Lowest Price Online",
+    "kind": "badge",
+    "exclusive": false,
+    "appliesTo": ["tiktok", "datapimp"],
+    "icon": "TrendingDown",
+    "palette": "emerald-green",
+    "order": 7
+  },
+  {
+    "value": "sold",
+    "label": "Sold",
+    "kind": "status",
+    "exclusive": true,
+    "appliesTo": ["tiktok"],
+    "icon": null,
+    "palette": "sky",
+    "order": 8
+  }
+]

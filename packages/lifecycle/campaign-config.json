@@ -1,0 +1,15 @@
+{
+  "_comment": "CONFIG, not measured data. Campaigns / video goals / promos have no Graylog or Postgres source today, so the assignment enrichment note reads goal+promo from here and labels them as configured. Match a campaign to a product by productIds (exact qr_code/productId) or productMatch (case-insensitive name substrings). Bundle membership in the note is REAL (from samples.bundle_id); only goal/promo come from this file.",
+  "defaultDailyVideoGoal": 3,
+  "campaigns": [
+    {
+      "id": "cupids-2026",
+      "name": "Cupids Desire",
+      "productMatch": ["cupid", "desire drops"],
+      "productIds": [],
+      "dailyVideoGoal": 5,
+      "endsAt": "2026-07-31",
+      "promo": "5 videos for $50 Cupids promo"
+    }
+  ]
+}
