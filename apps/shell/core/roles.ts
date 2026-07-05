@@ -43,6 +43,11 @@ export interface User {
   name: string;
   /** Id of the functional role this user holds (see `roles`). */
   role: string;
+  /**
+   * Login email of the same identity in lifepreneur-v1 (Better Auth), for
+   * users that exist in both systems — e.g. `dj` ↔ daniel@lifepreneur.com.
+   */
+  email?: string;
 }
 
 export interface RolesConfig {

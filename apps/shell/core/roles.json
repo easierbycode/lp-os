@@ -52,7 +52,12 @@
     }
   ],
   "users": [
-    { "id": "dj", "name": "DJ", "role": "admin" },
+    {
+      "id": "dj",
+      "name": "DJ",
+      "role": "admin",
+      "email": "daniel@lifepreneur.com"
+    },
     { "id": "ka", "name": "Karl", "role": "warehouse" },
     {
       "id": "@boosteddealsdaily",
