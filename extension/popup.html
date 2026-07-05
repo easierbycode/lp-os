@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LP-OS Scraper</title>
+  <style>
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 12px;
+      font: 13px/1.45 system-ui, sans-serif;
+      background: #14161a;
+      color: #e6e8eb;
+    }
+    h1 { font-size: 14px; margin: 0 0 8px; }
+    .muted { color: #8a919c; }
+    .who {
+      background: #1d2127;
+      border: 1px solid #2a2f37;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+    .who b { font-weight: 600; }
+    .role-admin { color: #6cc0ff; }
+    .role-creator { color: #7fe0a7; }
+    .role-warehouse { color: #ffd479; }
+    .role-none { color: #f2777a; }
+    .row { display: flex; gap: 6px; margin-bottom: 10px; }
+    input[type="text"] {
+      flex: 1;
+      background: #0f1114;
+      border: 1px solid #2a2f37;
+      border-radius: 4px;
+      color: #e6e8eb;
+      padding: 5px 8px;
+      font: inherit;
+    }
+    button {
+      background: #2a6df4;
+      border: 0;
+      border-radius: 4px;
+      color: #fff;
+      padding: 5px 10px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button.secondary { background: #2a2f37; }
+    button:disabled { background: #2a2f37; color: #6b7280; cursor: default; }
+    #scrape { width: 100%; padding: 7px 0; font-weight: 600; margin-bottom: 10px; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 3px 0;
+      border-bottom: 1px solid #1d2127;
+    }
+    li:last-child { border-bottom: 0; }
+    .on { color: #7fe0a7; }
+    .off { color: #5b6470; }
+    .section { margin: 4px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #8a919c; }
+    #tabstatus { margin-bottom: 10px; }
+    #feedback { min-height: 16px; margin-top: 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>LP-OS TikTok Shop Scraper</h1>
+
+  <div class="who" id="who">Resolving role…</div>
+
+  <div class="row">
+    <input type="text" id="user" placeholder="LP-OS user (dj or @handle)">
+    <button id="save">Set</button>
+    <button id="clear" class="secondary" title="Clear the stored override">✕</button>
+  </div>
+
+  <div id="tabstatus" class="muted">Checking this tab…</div>
+  <button id="scrape" disabled>Scrape this page</button>
+
+  <div class="section">Behaviors</div>
+  <ul id="behaviors"></ul>
+
+  <div id="feedback"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
