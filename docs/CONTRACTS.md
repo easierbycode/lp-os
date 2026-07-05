@@ -362,7 +362,9 @@ faithfully (rebrand "Thirsty OS" → "LP-OS"), then:
     }
   ],
   "users": [
-    { "id": "dj", "name": "DJ", "role": "admin" },
+    // `email` (optional) ties a shell user to the same identity in
+    // lifepreneur-v1 (Better Auth login) — the shared mock admin.
+    { "id": "dj", "name": "DJ", "role": "admin", "email": "daniel@lifepreneur.com" },
     { "id": "ka", "name": "Karl", "role": "warehouse" },
     {
       "id": "@boosteddealsdaily",
