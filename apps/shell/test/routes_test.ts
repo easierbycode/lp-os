@@ -67,6 +67,40 @@ Deno.test("GET /os.css served from static at root path", async () => {
   await res.body?.cancel();
 });
 
+Deno.test("GET /manifest.webmanifest → PWA manifest with icons", async () => {
+  const res = await handler(req("/manifest.webmanifest"));
+  assertEquals(res.status, 200);
+  assertStringIncludes(
+    res.headers.get("content-type") ?? "",
+    "application/manifest+json",
+  );
+  const manifest = await res.json();
+  assertEquals(manifest.name, "LP-OS");
+  assertEquals(manifest.display, "standalone");
+  assert(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
+});
+
+Deno.test("GET /sw.js → service worker as JavaScript", async () => {
+  const res = await handler(req("/sw.js"));
+  assertEquals(res.status, 200);
+  assertStringIncludes(
+    res.headers.get("content-type") ?? "",
+    "text/javascript",
+  );
+  const body = await res.text();
+  assertStringIncludes(body, "lpos-shell-");
+});
+
+Deno.test("shell page links the manifest and registers the SW", async () => {
+  const res = await handler(req("/"));
+  const html = await res.text();
+  assertStringIncludes(
+    html,
+    '<link rel="manifest" href="/manifest.webmanifest">',
+  );
+  assertStringIncludes(html, 'serviceWorker.register("/sw.js")');
+});
+
 Deno.test("GET /api/sample-statuses → vocabulary without DB", async () => {
   const res = await handler(req("/api/sample-statuses"));
   assertEquals(res.status, 200);

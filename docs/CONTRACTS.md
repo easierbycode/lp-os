@@ -25,11 +25,15 @@ lp-os/
   docs/
 ```
 
-`apps/member` is npm/Vite-driven (mirroring tiktok-sample-tracker) and
-intentionally _not_ a Deno workspace member; it is excluded from root fmt/lint.
-Cross-package Deno imports use the workspace names `@lp-os/db`, `@lp-os/relay`,
-`@lp-os/graylog`, `@lp-os/lifecycle` (already pinned in each package's
-`deno.json`).
+`apps/member` is npm/Vite-driven (mirroring tiktok-sample-tracker). It is listed
+in the root `workspace` array only because Deno refuses to run against a nested
+`deno.json` that isn't a member — but npm owns its `node_modules` (run `npm ci`
+there, not `deno install`) and it is excluded from root fmt/lint. Its
+`deno.json` import map carries the `node:` builtins plus the bare npm specifiers
+the generated `.deno-deploy` server imports (needed by `deno desktop`; see
+`docs/DISTRIBUTION.md`). Cross-package Deno imports use the workspace names
+`@lp-os/db`, `@lp-os/relay`, `@lp-os/graylog`, `@lp-os/lifecycle` (already
+pinned in each package's `deno.json`).
 
 ## Environment variables (the complete set)
 
@@ -364,7 +368,12 @@ faithfully (rebrand "Thirsty OS" → "LP-OS"), then:
   "users": [
     // `email` (optional) ties a shell user to the same identity in
     // lifepreneur-v1 (Better Auth login) — the shared mock admin.
-    { "id": "dj", "name": "DJ", "role": "admin", "email": "daniel@lifepreneur.com" },
+    {
+      "id": "dj",
+      "name": "DJ",
+      "role": "admin",
+      "email": "daniel@lifepreneur.com"
+    },
     { "id": "ka", "name": "Karl", "role": "warehouse" },
     {
       "id": "@boosteddealsdaily",

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "svelte-kit sync && vite build",
+    "build": "svelte-kit sync && vite build && node scripts/patch-deploy.mjs",
     "preview": "vite preview",
     "prepare": "svelte-kit sync",
     "sync": "svelte-kit sync",

@@ -24,7 +24,9 @@ follows.
 
 - `apps/shell` — Fresh core app; `static/os.js` is the draggable-window desktop
   shell (vanilla JS, no framework — keep it that way).
-- `apps/member` — SvelteKit dashboard (npm/Vite; not a Deno workspace member).
+- `apps/member` — SvelteKit dashboard (npm/Vite-driven; in the Deno workspace
+  only because Deno requires nested configs to be members — npm owns its
+  `node_modules`, and root fmt/lint exclude it).
 - `packages/db` — schema, migrations (`migrations/*.sql`, applied by
   `scripts/migrate.ts`), pool + query helpers.
 - `packages/relay` — scan-socket server module + `ScanRelay` browser client.
@@ -41,6 +43,9 @@ follows.
 - `deno task check` — typecheck the Deno workspace.
 - `deno task test` — package tests.
 - `deno task migrate` — apply SQL migrations.
+- `deno task desktop:shell` / `deno task desktop:member` — native desktop
+  bundles into `dist/` (needs Deno 2.9+; see `docs/DISTRIBUTION.md`).
+- `deno task gen:icons` — regenerate both apps' PWA/desktop icon sets.
 
 ## Conventions
 
