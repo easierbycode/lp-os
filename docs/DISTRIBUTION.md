@@ -37,12 +37,17 @@ in 2.7/2.8. Experimental upstream — expect churn.
 
 - `deno task desktop:shell` → `dist/LP-OS/`
 - `deno task desktop:member` → `dist/LP-OS-Member/`
-- `deno task desktop:shell:raw` → same output, `--backend raw` (winit host) —
-  needed on Windows-on-ARM, see known issues. `deno desktop` treats everything
-  after the entrypoint as *script* args, so
-  `deno task desktop:shell --backend raw` silently builds the default webview
-  backend (the shell task ends in `main.ts`); the member task has no
-  entrypoint, so `deno task desktop:member --backend raw` does work.
+- `deno task desktop:shell:cef` → `dist/LP-OS-cef/`, `--backend cef` (bundled
+  Chromium, ~400MB on disk vs ~90MB webview) — the backend that renders on
+  Windows-on-ARM, see known issues.
+- `deno task desktop:shell:raw` → same output as `desktop:shell`,
+  `--backend raw` (bare winit window host — no web engine, so the window is
+  blank; only useful to prove the compiled payload boots and serves).
+
+Flag-position gotcha: `deno desktop` treats everything after the entrypoint as
+*script* args, so `deno task desktop:shell --backend cef` silently builds the
+default webview backend (the shell task ends in `main.ts`); the member task has
+no entrypoint, so `deno task desktop:member --backend cef` does work.
 
 On Windows each bundle is a directory: `<Name>.bat` launcher,
 `laufey_webview.exe` (the webview host), and `<Name>.dll` (the compiled app
@@ -76,9 +81,12 @@ Why the task flags are what they are:
 - **Windows on ARM:** the x64 `laufey_webview.exe` host crashes at window
   creation under emulation (0xc0000409 in ucrtbase.dll; WebView2 is installed
   and current). The compiled server inside the payload works — verified by
-  probing its port before teardown. Workaround verified on this machine: build
-  with `--backend raw` (`deno task desktop:shell:raw`; winit host, window stays
-  up), or run the webview bundles on x64 Windows.
+  probing its port before teardown. Fix verified on this machine 2026-07-06:
+  build with the CEF backend (`deno task desktop:shell:cef`) — the bundled
+  x64 Chromium runs fine under emulation and renders the shell UI. `--backend
+  raw` also stays up, but it's a bare winit host with no web engine (blank
+  window), so it only proves the payload boots. Webview bundles are fine on
+  x64 Windows.
 - **Member desktop on Windows:** requests 500 because the deploy.json static
   routes (`/_app/immutable/:file*`) are opened as literal paths in the desktop
   VFS runtime (os error 123) instead of pattern-matching. The same
