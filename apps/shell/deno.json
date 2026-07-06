@@ -7,7 +7,8 @@
     "start": "deno run -A main.ts",
     "build:scan-client": "deno bundle --platform browser -o static/scan-client.js ../../packages/relay/client.ts",
     "desktop": "deno task build:scan-client && deno desktop -A --node-modules-dir=none --no-lock --include static main.ts",
-    "desktop:raw": "deno task build:scan-client && deno desktop -A --node-modules-dir=none --no-lock --include static --backend raw main.ts"
+    "desktop:raw": "deno task build:scan-client && deno desktop -A --node-modules-dir=none --no-lock --include static --backend raw main.ts",
+    "desktop:cef": "deno task build:scan-client && deno desktop -A --node-modules-dir=none --no-lock --include static --backend cef -o ../../dist/LP-OS-cef.exe main.ts"
   },
   "desktop": {
     "app": {
