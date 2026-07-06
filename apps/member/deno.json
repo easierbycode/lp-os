@@ -1,11 +1,37 @@
 {
   "tasks": {
     "dev": "deno run -A npm:vite dev",
-    "build": "deno run -A npm:@sveltejs/kit/svelte-kit sync && deno run -A npm:vite build",
+    "build": "deno run -A npm:@sveltejs/kit/svelte-kit sync && deno run -A npm:vite build && deno run -A scripts/patch-deploy.mjs",
     "preview": "deno run -A npm:vite preview",
-    "check": "deno run -A npm:@sveltejs/kit/svelte-kit sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json"
+    "check": "deno run -A npm:@sveltejs/kit/svelte-kit sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json",
+    "desktop": "deno desktop -A --no-check --node-modules-dir=none --no-lock"
+  },
+  "desktop": {
+    "app": {
+      "name": "LP-OS Member",
+      "identifier": "com.lifepreneur.lpos.member",
+      "icons": {
+        "windows": "static/icons/icon.ico",
+        "macos": "static/icons/icon-512.png",
+        "linux": "static/icons/icon-512.png"
+      }
+    },
+    "backend": "webview",
+    "output": {
+      "windows": "../../dist/LP-OS-Member.exe",
+      "macos": "../../dist/LP-OS-Member.app",
+      "linux": "../../dist/LP-OS-Member.AppImage"
+    }
   },
   "imports": {
+    "@deno/svelte-adapter": "npm:@deno/svelte-adapter@^0.2.1",
+    "@deno/svelte-adapter/": "npm:/@deno/svelte-adapter@^0.2.1/",
+    "@sveltejs/kit": "npm:@sveltejs/kit@^2.69.1",
+    "@sveltejs/kit/": "npm:/@sveltejs/kit@^2.69.1/",
+    "clsx": "npm:clsx@^2.1.1",
+    "cookie": "npm:cookie@^0.6.0",
+    "devalue": "npm:devalue@^5.8.1",
+    "set-cookie-parser": "npm:set-cookie-parser@^3.1.1",
     "events": "node:events",
     "fs/promises": "node:fs/promises",
     "util": "node:util",

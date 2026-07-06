@@ -10,3 +10,6 @@ _fresh/
 .env
 .env.local
 .env.*.local
+
+# generated: prebuilt relay client for desktop builds
+apps/shell/static/scan-client.js

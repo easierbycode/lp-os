@@ -238,6 +238,9 @@ function renderOSShell(url: URL): Response {
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>LP-OS</title>
     <meta name="theme-color" content="#0b0d11">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
@@ -265,6 +268,13 @@ function renderOSShell(url: URL): Response {
     globalThis.LPOS_OS_CONFIG = ${osConfigJson};
     globalThis.LPOS_SCAN_RELAY = globalThis.LPOS_OS_CONFIG.scanRelay || "";</script>
     <script type="module" src="/os.js"></script>
+    <script>
+    if ("serviceWorker" in navigator) {
+      addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+    </script>
   </body>
 </html>`;
   return new Response(html, {
@@ -285,6 +295,7 @@ const MIME_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".jpg": "image/jpeg",

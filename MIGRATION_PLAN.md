@@ -14,12 +14,17 @@ plus scoping decisions from Daniel across five rounds (Section 1).
 > `packages/{db,relay,graylog,lifecycle}`, the merged `extension/`, and the
 > consolidated `.claude/skills/` all exist and pass `deno task check` +
 > `deno task test`. Where this plan left questions open, the decisions taken are
-> recorded in `docs/CONTRACTS.md` (marked **[decided here]**). Phases 9–10
-> (PWA/service worker, `deno desktop` binaries, deploys, retire/redirect of the
-> old repos) remain. On the Section 13 deadline: data-pimp's `deno.json` deploy
-> block uses the new platform's `{org, app}` format, so it appears to already be
-> on the new Deno Deploy — worth a one-minute confirmation in console.deno.com
-> before 2026-07-20.
+> recorded in `docs/CONTRACTS.md` (marked **[decided here]**). Phase 9's in-repo
+> work also landed later on 2026-07-05: PWA manifests + service workers for both
+> apps and `deno desktop` build targets (`deno task desktop:shell` /
+> `desktop:member`, Deno 2.9+) — see `docs/DISTRIBUTION.md` for the build flags,
+> verified behavior, and known upstream issues. What remains of phases 9–10 is
+> external: deploys to the new Deno Deploy, domain repointing, and retiring the
+> old repos (checklist in `docs/DISTRIBUTION.md`; Android TWA stays with
+> tiktok-sample-tracker until that app migrates). On the Section 13 deadline:
+> data-pimp's `deno.json` deploy block uses the new platform's `{org, app}`
+> format, so it appears to already be on the new Deno Deploy — worth a
+> one-minute confirmation in console.deno.com before 2026-07-20.
 
 > **Update, added minutes after this document was first drafted:** while it was
 > being written, a SpacetimeDB quickstart scaffold

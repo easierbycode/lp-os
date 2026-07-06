@@ -4,7 +4,26 @@
   "exports": "./main.ts",
   "tasks": {
     "dev": "deno run -A --watch main.ts",
-    "start": "deno run -A main.ts"
+    "start": "deno run -A main.ts",
+    "build:scan-client": "deno bundle --platform browser -o static/scan-client.js ../../packages/relay/client.ts",
+    "desktop": "deno task build:scan-client && deno desktop -A --node-modules-dir=none --no-lock --include static main.ts"
+  },
+  "desktop": {
+    "app": {
+      "name": "LP-OS",
+      "identifier": "com.lifepreneur.lpos",
+      "icons": {
+        "windows": "static/icons/icon.ico",
+        "macos": "static/icons/icon-512.png",
+        "linux": "static/icons/icon-512.png"
+      }
+    },
+    "backend": "webview",
+    "output": {
+      "windows": "../../dist/LP-OS.exe",
+      "macos": "../../dist/LP-OS.app",
+      "linux": "../../dist/LP-OS.AppImage"
+    }
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.0",
