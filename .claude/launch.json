@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shell",
+      "runtimeExecutable": "deno",
+      "runtimeArgs": ["task", "dev"],
+      "port": 8000
+    },
+    {
+      "name": "member",
+      "runtimeExecutable": "deno",
+      "runtimeArgs": ["task", "dev:member"],
+      "port": 8080
+    }
+  ]
+}

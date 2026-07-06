@@ -6,6 +6,10 @@
     "check": "deno run -A npm:@sveltejs/kit/svelte-kit sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json",
     "desktop": "deno desktop -A --no-check --node-modules-dir=none --no-lock"
   },
+  "deploy": {
+    "org": "easierbycode",
+    "app": "lp-os-member"
+  },
   "desktop": {
     "app": {
       "name": "LP-OS Member",

@@ -94,10 +94,19 @@ Why the task flags are what they are:
   `deno run -A .deno-deploy/server.ts`, so this is upstream
   (@deno/experimental-route-config under `deno desktop`), not our config.
   Re-test on newer Deno releases.
-- On this dev machine the x64 Deno and ARM64 Node toolchains fight over
-  `apps/member/node_modules`: a bare `deno install` at the repo root replaces
-  npm's ARM64 rollup bindings with x64 ones and `npm run build` then dies with
-  `MODULE_NOT_FOUND` on rollup natives. Fix: re-run `npm ci` in `apps/member`.
+- On this dev machine the x64 Deno and ARM64 Node toolchains used to fight
+  over `apps/member/node_modules`. Resolved 2026-07-06 by taking apps/member
+  OUT of the root deno.json workspace (matching CLAUDE.md's "not a Deno
+  workspace member") — npm now owns `apps/member/node_modules` and Deno runs
+  it byonm-style, so root `deno install`/`deno task` no longer rewrites it.
+  Remaining quirk: `deno task dev:member` executes vite under x64 Deno, which
+  needs the x64 native twins next to npm's ARM64 ones. After any `npm ci` in
+  apps/member, re-add them (then `git checkout -- package-lock.json`, npm
+  records them even with --no-save):
+  `npm i --no-save --force @rollup/rollup-win32-x64-msvc@<rollup ver> @esbuild/win32-x64@<esbuild ver> @tailwindcss/oxide-win32-x64-msvc@<oxide ver> lightningcss-win32-x64-msvc@<lightningcss ver>`
+  (match versions to the installed arm64 packages). The harmless "not a member
+  of the workspace" warning on member tasks is this arrangement working as
+  intended.
 
 ## Android (TWA)
 
@@ -112,9 +121,15 @@ None of these can be done from this repo; they're console/DNS/repo-admin steps.
 - [ ] **Before 2026-07-20:** confirm in console.deno.com that data-pimp's deploy
       (its `deno.json` uses the new `{org, app}` format) is actually on the new
       Deno Deploy platform — Deploy Classic shuts down that day.
-- [ ] Deploy apps/shell and apps/member to the new Deno Deploy (add `deploy`
-      blocks once org/app names and the production domain are decided; the
-      plan's target: shell replaces data-pimp's deploy).
+- [ ] Deploy apps/shell and apps/member to the new Deno Deploy. `deploy`
+      blocks are in place (org `easierbycode`, apps `lp-os` and `lp-os-member`
+      — create those apps in console.deno.com, or edit the blocks to match).
+      Shell build step: `deno task build` in apps/shell (scan-client bundle +
+      extension zip); member build step: `deno task build` in apps/member
+      (entrypoint `.deno-deploy/server.ts`). Set the shell's env there too:
+      DATABASE_URL, MEMBER_APP_URL (the member deploy's URL), and
+      GRAYLOG_INGEST_TOKEN. The plan's target: shell replaces data-pimp's
+      deploy behind thirsty.store.
 - [ ] Repoint or retire `thirsty.store` / `admin.thirsty.store` once LP-OS is
       verified at parity; then update the shell FOLDERS defaults
       (`INVENTORY_APP_URL` et al.), the extension's default GELF endpoint

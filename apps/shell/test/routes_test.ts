@@ -123,6 +123,69 @@ Deno.test("GET /marketplace serves the Marketplace window page", async () => {
   assertStringIncludes(html, "eBay");
 });
 
+Deno.test("GET /e2e serves the E2E demo page", async () => {
+  const res = await handler(req("/e2e"));
+  assertEquals(res.status, 200);
+  assertStringIncludes(res.headers.get("content-type") ?? "", "text/html");
+  const html = await res.text();
+  assertStringIncludes(html, "e2e");
+});
+
+Deno.test({
+  name: "GET /api/products → empty catalog without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/products"));
+    assertEquals(res.status, 200);
+    assertEquals(res.headers.get("access-control-allow-origin"), "*");
+    const body = await res.json();
+    assert(Array.isArray(body) && body.length === 0);
+  },
+});
+
+Deno.test({
+  name: "GET /api/e2e-context → usable fallback without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/e2e-context?id=42"));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.creator, "@e2e-demo");
+    assertEquals(body.ids, ["42"]);
+    assertStringIncludes(body.source, "default");
+  },
+});
+
+Deno.test("POST /api/ebay-price prices without DB (pure formula)", async () => {
+  const res = await handler(req("/api/ebay-price", {
+    method: "POST",
+    body: JSON.stringify({
+      retail: 89.99,
+      costBasis: 0,
+      condition: "new",
+      comps: [58, 62, 65],
+    }),
+  }));
+  assertEquals(res.status, 200);
+  assertEquals(res.headers.get("access-control-allow-origin"), "*");
+  const body = await res.json();
+  assert(typeof body.price === "number" && body.price > 0);
+  assertEquals(body.compsSource, "provided");
+  assert(body.price < 89.99); // undercuts the comp anchor, never above retail
+});
+
+Deno.test("GET /extension.zip → a zip of the merged extension", async () => {
+  const res = await handler(req("/extension.zip"));
+  assertEquals(res.status, 200);
+  assertStringIncludes(
+    res.headers.get("content-type") ?? "",
+    "application/zip",
+  );
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  // Zip local-file-header magic "PK\x03\x04".
+  assertEquals([...bytes.slice(0, 2)], [0x50, 0x4b]);
+});
+
 Deno.test({
   name: "marketplace APIs → 503 without DATABASE_URL",
   ignore: hasDb,
@@ -150,6 +213,94 @@ Deno.test({
       assertEquals(body.error, "DATABASE_URL not configured");
     }
   },
+});
+
+Deno.test("GET /inventory serves the Product Analysis page", async () => {
+  const res = await handler(req("/inventory"));
+  assertEquals(res.status, 200);
+  assertStringIncludes(res.headers.get("content-type") ?? "", "text/html");
+  const html = await res.text();
+  assertStringIncludes(html, "Product Analysis");
+  assertStringIncludes(html, "/inventory.css");
+  assertStringIncludes(html, "/inventory.js");
+});
+
+Deno.test({
+  name: "GET /api/health → graylogConfigured false without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/health"));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(body.graylogConfigured, false);
+  },
+});
+
+Deno.test({
+  name: "GET /api/unpriced-samples → empty list shape without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/unpriced-samples?limit=1000"));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.items, []);
+    assertEquals(body.total, 0);
+    assertEquals(body.unpricedCount, 0);
+    assertEquals(body.pricedCount, 0);
+  },
+});
+
+Deno.test({
+  name: "GET /api/comparison → empty rows without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/comparison"));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assert(Array.isArray(body) && body.length === 0);
+  },
+});
+
+Deno.test({
+  name: "GET /api/product/:id → 404 without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/product/1729527400425427463"));
+    assertEquals(res.status, 404);
+    const body = await res.json();
+    assertEquals(body.ok, false);
+    assertEquals(body.error, "Product not found in Graylog");
+  },
+});
+
+Deno.test({
+  name:
+    "POST fetch-price on an unknown product → clean 502 without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(
+      req("/api/unpriced-samples/42/fetch-price", { method: "POST" }),
+    );
+    assertEquals(res.status, 502);
+    const body = await res.json();
+    assertEquals(body.ok, false);
+    assertStringIncludes(body.error, "was not found in Graylog");
+  },
+});
+
+Deno.test("unpriced-samples routes enforce methods regardless of DB", async () => {
+  const post = await handler(req("/api/unpriced-samples", { method: "POST" }));
+  assertEquals(post.status, 405);
+  await post.body?.cancel();
+
+  const get = await handler(req("/api/unpriced-samples/42"));
+  assertEquals(get.status, 405);
+  await get.body?.cancel();
+
+  const fetchGet = await handler(req("/api/unpriced-samples/42/fetch-price"));
+  assertEquals(fetchGet.status, 405);
+  await fetchGet.body?.cancel();
 });
 
 Deno.test("marketplace APIs enforce methods regardless of DB", async () => {
