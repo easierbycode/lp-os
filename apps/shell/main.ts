@@ -8,6 +8,7 @@
 // assets, relay/kiosk endpoints and stubs keep working; DB-backed APIs return
 // 503 {error: "DATABASE_URL not configured"} instead of crashing.
 
+import "./core/fresh-no-build.ts"; // before "fresh": hides DENO_DEPLOYMENT_ID
 import { App } from "fresh";
 import { fromFileUrl } from "@std/path";
 import * as db from "@lp-os/db";
