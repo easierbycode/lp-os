@@ -74,14 +74,15 @@ title/price/image. The **Buy-It-Now price is computed by the pricing formula**
 ## Pricing
 
 The Buy-It-Now price comes from the eBay pricing formula
-(data-pimp's `core/ebay-pricing.ts`), exposed as `GET|POST /api/ebay-price`.
+(`packages/marketplace/ebay-pricing.ts`, ported verbatim from data-pimp),
+exposed as `GET|POST /api/ebay-price` on the LP-OS shell.
 
-> **Not ported into LP-OS yet.** The LP-OS shell serves no `/api/ebay-price`
-> (it 404s) and has no `core/ebay-pricing.ts`. Until the port lands, call the
-> still-live data-pimp deployment at **`https://thirsty.store`** — the
-> endpoint is read-only (a pure pricing calculation; it writes nothing), so
-> using the old deployment for it is safe. Set `EBAY_PRICE_API_URL` to
-> override (e.g. once LP-OS gains the route).
+> **autoComps caveat.** LP-OS did not port data-pimp's live-eBay comps
+> scraper, so against LP-OS `autoComps=1` returns `compsSource: "none"` and
+> the formula anchors on retail — pass explicit `comps=` for market-aware
+> pricing. The `https://thirsty.store` default works before the domain
+> cutover (data-pimp) and after it (LP-OS); set `EBAY_PRICE_API_URL` to
+> `http://localhost:8000` to hit a local shell.
 
 It undercuts the cheapest **credible** competitor, marks down the longer a
 unit sits, and never drops below a fee-aware floor (so a listing never loses

@@ -226,8 +226,13 @@ const OS_CONFIG =
     : {};
 
 function safeHttpUrl(value) {
+  // Empty must stay empty — resolving "" against location.href would return
+  // the shell's own URL (and e.g. an unconfigured Graylog window would then
+  // iframe LP-OS inside itself instead of staying hidden).
+  const raw = String(value || "").trim();
+  if (!raw) return "";
   try {
-    const url = new URL(String(value || ""), location.href);
+    const url = new URL(raw, location.href);
     if (url.protocol !== "https:" && url.protocol !== "http:") return "";
     url.hash = "";
     return url.href;

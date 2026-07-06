@@ -11,5 +11,6 @@ _fresh/
 .env.local
 .env.*.local
 
-# generated: prebuilt relay client for desktop builds
+# generated: prebuilt relay client + extension zip (deno task build)
 apps/shell/static/scan-client.js
+apps/shell/static/extension.zip

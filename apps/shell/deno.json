@@ -5,10 +5,16 @@
   "tasks": {
     "dev": "deno run -A --watch main.ts",
     "start": "deno run -A main.ts",
+    "build": "deno task build:scan-client && deno task build:extension-zip",
     "build:scan-client": "deno bundle --platform browser -o static/scan-client.js ../../packages/relay/client.ts",
-    "desktop": "deno task build:scan-client && deno desktop -A --node-modules-dir=none --no-lock --include static main.ts",
-    "desktop:raw": "deno task build:scan-client && deno desktop -A --node-modules-dir=none --no-lock --include static --backend raw main.ts",
-    "desktop:cef": "deno task build:scan-client && deno desktop -A --node-modules-dir=none --no-lock --include static --backend cef -o ../../dist/LP-OS-cef.exe main.ts"
+    "build:extension-zip": "deno run -A scripts/build-extension-zip.ts",
+    "desktop": "deno task build && deno desktop -A --node-modules-dir=none --no-lock --include static main.ts",
+    "desktop:raw": "deno task build && deno desktop -A --node-modules-dir=none --no-lock --include static --backend raw main.ts",
+    "desktop:cef": "deno task build && deno desktop -A --node-modules-dir=none --no-lock --include static --backend cef -o ../../dist/LP-OS-cef.exe main.ts"
+  },
+  "deploy": {
+    "org": "easierbycode",
+    "app": "lp-os"
   },
   "desktop": {
     "app": {
@@ -30,6 +36,7 @@
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.0",
     "@std/path": "jsr:@std/path@^1.0.0",
+    "fflate": "npm:fflate@^0.8.2",
     "fresh": "jsr:@fresh/core@^2.3.0"
   }
 }

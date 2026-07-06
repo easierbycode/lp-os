@@ -30,6 +30,16 @@ export {
   type EbayClientOptions,
   ebayCredentialsUsable,
 } from "./ebay.ts";
+// Pricing formula ported verbatim from data-pimp core/ebay-pricing.ts (pure,
+// stateless) — serves /api/ebay-price and the Demos/E2E pricing demo.
+export {
+  computeEbayPrice,
+  DEFAULT_EBAY_PRICING,
+  type EbayPriceInput,
+  type EbayPriceResult,
+  markdownLadder,
+  type MarkdownLadderRow,
+} from "./ebay-pricing.ts";
 
 // Same GELF host as every lifecycle event (docs/CONTRACTS.md [decided here]).
 const GRAYLOG_SOURCE = "thirsty-store-kiosk";

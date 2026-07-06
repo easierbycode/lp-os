@@ -1,7 +1,6 @@
 {
   "workspace": [
     "./apps/shell",
-    "./apps/member",
     "./packages/db",
     "./packages/relay",
     "./packages/graylog",
