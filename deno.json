@@ -18,6 +18,7 @@
     "check": "deno check apps/shell packages/db packages/relay packages/graylog packages/lifecycle packages/marketplace",
     "test": "deno test -A packages apps/shell",
     "desktop:shell": "deno task --cwd apps/shell desktop",
+    "desktop:shell:raw": "deno task --cwd apps/shell desktop:raw",
     "desktop:member": "deno task --cwd apps/member desktop",
     "gen:icons": "deno run -A scripts/gen-icons.ts",
     "migrate": "deno run -A packages/db/scripts/migrate.ts",
