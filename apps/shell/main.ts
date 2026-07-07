@@ -1347,7 +1347,65 @@ export default app;
 
 /* ----------------------------------------------------------------- boot -- */
 
+// Desktop bundles (`deno desktop`) should open at full screen size. The
+// desktop runtime exposes Deno.BrowserWindow, and the first construction
+// adopts the auto-created startup window; there is no maximize/fullscreen
+// API (deno 2.9 / laufey 0.5), so size the window to the screen's available
+// area, which the webview reports once it has a document. Adoption must wait
+// until the server is actually up: constructing during boot races the
+// runtime's own navigate-and-reveal of the startup window and strands it on
+// the placeholder page.
+async function maximizeDesktopWindow() {
+  const BrowserWindow = (Deno as unknown as {
+    BrowserWindow?: new () => {
+      executeJs(script: string): Promise<unknown>;
+      setPosition(x: number, y: number): void;
+      setSize(width: number, height: number): void;
+    };
+  }).BrowserWindow;
+  if (!BrowserWindow) return; // plain `deno run`, not the desktop runtime
+  // The desktop runtime overrides the listen address via DENO_SERVE_ADDRESS
+  // ("tcp:127.0.0.1:<port>"); wait until the server answers there.
+  const port = Deno.env.get("DENO_SERVE_ADDRESS")?.split(":").pop();
+  if (!port) return;
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  for (let attempt = 0; attempt < 60; attempt++) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/health`);
+      await res.body?.cancel();
+      if (res.ok) break;
+    } catch {
+      // server not bound yet
+    }
+    await sleep(250);
+  }
+  const win = new BrowserWindow();
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try {
+      const result = await win.executeJs(
+        "[screen.availWidth, screen.availHeight]",
+      );
+      // CEF resolves with the value wrapped as { ok, value }; unwrap either.
+      const dims = (result && typeof result === "object" && "value" in result)
+        ? (result as { value: unknown }).value
+        : result;
+      if (
+        Array.isArray(dims) && typeof dims[0] === "number" && dims[0] > 0 &&
+        typeof dims[1] === "number" && dims[1] > 0
+      ) {
+        win.setPosition(0, 0);
+        win.setSize(dims[0], dims[1]);
+        return;
+      }
+    } catch {
+      // webview not ready to execute JS yet
+    }
+    await sleep(250);
+  }
+}
+
 if (import.meta.main) {
+  maximizeDesktopWindow();
   relay(); // start presence pruning + pg bridge (when DATABASE_URL is set)
   if (!hasDb) {
     console.warn(
