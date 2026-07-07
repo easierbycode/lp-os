@@ -58,7 +58,9 @@ package's `deno.json`).
   an absolute URL (split deploy) or a "/"-prefixed same-origin path. Default:
   same-origin `/member`, served by the shell from `apps/member/.deno-deploy`;
   falls back to `http://localhost:8080/member` when the member build is absent
-  (`deno task dev:member`). Used by the shell FOLDERS config.
+  (`deno task dev:member`). Used by the shell FOLDERS config (Member/App).
+- `MEMBER_WEB_URL` — the Member/Web window's URL, a separate deployment from
+  Member/App (default `https://data-pimp.easierbycode.deno.net/member`).
 - `SCANNER_APP_URL`, `INVENTORY_APP_URL` — external app URLs for shell FOLDERS
   entries (defaults: current production URLs, e.g. `https://admin.thirsty.store`
   for inventory).
@@ -414,8 +416,9 @@ derived. `roles.ts` mirrors flag logic server-side and exports
 
 ### FOLDERS changes vs data-pimp
 
-- `Member/App` → `${MEMBER_APP_URL}/` and `Member/Web` → `${MEMBER_APP_URL}/web`
-  **[decided here]** (two routes of the one new SvelteKit app).
+- `Member/App` → `${MEMBER_APP_URL}/` and `Member/Web` → `MEMBER_WEB_URL`
+  **[decided here]** (independent deployments; Web defaults to the data-pimp
+  member dashboard).
 - `Apps/Inventory` → `INVENTORY_APP_URL` (default stays
   `https://admin.thirsty.store` until the tracker migrates in).
 - `Apps/Graylog` → same-origin `/api/search/universal/relative`-backed simple

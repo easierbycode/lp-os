@@ -267,6 +267,12 @@ function baseAppUrl(value, fallback) {
 }
 
 const MEMBER_APP_URL = baseAppUrl(OS_CONFIG.memberAppUrl, "/member");
+// Member/Web is its own deployment (data-pimp member dashboard), not a route
+// of MEMBER_APP_URL — the two windows point at independent apps.
+const MEMBER_WEB_URL = baseAppUrl(
+  OS_CONFIG.memberWebUrl,
+  "https://data-pimp.easierbycode.deno.net/member",
+);
 const INVENTORY_APP_URL = baseAppUrl(
   OS_CONFIG.inventoryAppUrl,
   "https://admin.thirsty.store",
@@ -495,11 +501,9 @@ const FOLDERS = [
         id: "member-web",
         name: "Web",
         icon: ICONS.browser,
-        // The LP-OS SvelteKit member web app (apps/member), served
-        // same-origin at /member by the shell (MEMBER_APP_URL overrides for a
-        // split deploy). /web opens on the member dashboard inside the
-        // LifePreneur sidebar chrome.
-        url: MEMBER_APP_URL + "/web",
+        // The member web dashboard (seller/streamer/content dashboards) —
+        // a separate deployment from Member/App (MEMBER_WEB_URL).
+        url: MEMBER_WEB_URL,
         allow: "fullscreen",
         external: true,
         width: 1180,
