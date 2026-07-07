@@ -18,6 +18,7 @@
 //   any price edited before the window.
 
 import type { GraylogStore } from "@lp-os/graylog";
+import { externalApiEnabled, requireExternalApi } from "./external-apis.ts";
 
 /* ---------------------------------------------------------------- types -- */
 
@@ -437,6 +438,9 @@ export function createProductAnalysis(deps: {
   async function fetchPriceForSample(
     productId: string,
   ): Promise<UnpricedSample> {
+    // Kill switch first — don't even resolve the sample when the operator
+    // turned ScrapeCreators off (EXTERNAL_API_SCRAPECREATORS=off).
+    requireExternalApi(env, "scrapecreators");
     const edits = await loadEdits();
     const products = await fetchRecentProducts(1000);
     const product = products.find((item) => item.productId === productId);
@@ -563,6 +567,7 @@ export function createProductAnalysis(deps: {
   async function fetchScrapeCreatorsPrice(
     product: ProductAnalysis,
   ): Promise<ScrapeCreatorsPrice> {
+    requireExternalApi(env, "scrapecreators");
     const key = apiKey();
     if (!key) throw new Error("SCRAPECREATORS_API_KEY is not configured");
 
@@ -605,7 +610,8 @@ export function createProductAnalysis(deps: {
     fetchPriceForSample,
     fetchProductWithEdits,
     fetchComparisonWithEdits,
-    scrapeCreatorsConfigured: () => Boolean(apiKey()),
+    scrapeCreatorsConfigured: () =>
+      externalApiEnabled(env, "scrapecreators") && Boolean(apiKey()),
   };
 }
 

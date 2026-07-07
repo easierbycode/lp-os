@@ -14,6 +14,7 @@
   ],
   "permissions": ["scripting", "activeTab", "tabs", "storage"],
   "host_permissions": [
+    "https://thirsty.store/*",
     "https://partner.us.tiktokshop.com/*",
     "https://shop.tiktok.com/*",
     "https://www.tiktok.com/*",

@@ -6,8 +6,9 @@ The seven Claude Code skills consolidated from data-pimp and tok-scrape (see
 Global conventions after the merge:
 
 - Every `https://thirsty.store` API reference became the configurable
-  `LPOS_API_URL` (default `http://localhost:8000`). **LP-OS's production domain
-  is TBD** — set `LPOS_API_URL` explicitly to target a deployment.
+  `LPOS_API_URL` (default `http://localhost:8000`). **LP-OS's production
+  domain is `https://thirsty.store`** (it replaced data-pimp behind it) — set
+  `LPOS_API_URL=https://thirsty.store` to target production.
 - `https://admin.thirsty.store` (the sample-tracker UI) is unchanged — the
   tracker has not migrated into LP-OS yet, so those links still point at the
   pre-migration deployment.

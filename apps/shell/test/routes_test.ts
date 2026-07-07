@@ -303,6 +303,166 @@ Deno.test("unpriced-samples routes enforce methods regardless of DB", async () =
   await fetchGet.body?.cancel();
 });
 
+Deno.test("GET /kiosk serves the kiosk shell", async () => {
+  const res = await handler(req("/kiosk"));
+  assertEquals(res.status, 200);
+  assertStringIncludes(res.headers.get("content-type") ?? "", "text/html");
+  const html = await res.text();
+  assertStringIncludes(html, "Inventory Manager");
+  assertStringIncludes(html, "/kiosk.css");
+  assertStringIncludes(html, "/kiosk.js");
+});
+
+Deno.test("GET /kiosk/checkout?code= serves the same shell (client routing)", async () => {
+  const res = await handler(req("/kiosk/checkout?code=1729527400425427463"));
+  assertEquals(res.status, 200);
+  const html = await res.text();
+  assertStringIncludes(html, "/kiosk.js"); // deep links must never 404
+});
+
+Deno.test({
+  name: "GET /api/samples/:id/image → 503 without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/samples/42/image"));
+    assertEquals(res.status, 503);
+    assertEquals((await res.json()).error, "DATABASE_URL not configured");
+  },
+});
+
+Deno.test("POST /api/samples/:id/image → 405", async () => {
+  const res = await handler(req("/api/samples/42/image", { method: "POST" }));
+  assertEquals(res.status, 405);
+  await res.body?.cancel();
+});
+
+Deno.test("GET /member → member app (redirect or HTML), 503 when unbuilt", async () => {
+  const res = await handler(req("/member"));
+  if (res.status === 503) {
+    // fresh checkout: apps/member/.deno-deploy absent
+    assertEquals((await res.json()).error, "member app not built");
+    return;
+  }
+  if (res.status === 308) {
+    // Kit normalizes the bare base path to /member/.
+    assertEquals(res.headers.get("location"), "/member/");
+    await res.body?.cancel();
+    const followed = await handler(req("/member/"));
+    assertEquals(followed.status, 200);
+    assertStringIncludes(
+      (await followed.text()).toLowerCase(),
+      "<!doctype html",
+    );
+    return;
+  }
+  assertEquals(res.status, 200);
+  assertStringIncludes(res.headers.get("content-type") ?? "", "text/html");
+  assertStringIncludes((await res.text()).toLowerCase(), "<!doctype html");
+});
+
+Deno.test("GET /member/web renders only /member-scoped links", async () => {
+  const res = await handler(req("/member/web"));
+  if (res.status === 503) return await res.body?.cancel(); // unbuilt
+  const html = await res.text();
+  for (const m of html.matchAll(/(?:href|src)="([^"]*)"/g)) {
+    const url = new URL(m[1], "http://localhost:8000/member/web");
+    if (url.origin !== "http://localhost:8000") continue;
+    assertEquals(url.pathname.startsWith("/member"), true, `leak: ${m[1]}`);
+  }
+});
+
+Deno.test("member immutable assets get immutable cache headers", async () => {
+  let entry = "";
+  try {
+    const dir = new URL(
+      "../../member/.deno-deploy/static/member/_app/immutable/entry/",
+      import.meta.url,
+    );
+    for (const e of Deno.readDirSync(dir)) {
+      if (e.isFile) {
+        entry = e.name;
+        break;
+      }
+    }
+  } catch {
+    // member not built
+  }
+  if (!entry) return;
+  const res = await handler(
+    req(`/member/_app/immutable/entry/${entry}`),
+  );
+  assertEquals(res.status, 200);
+  assertStringIncludes(res.headers.get("cache-control") ?? "", "immutable");
+  await res.body?.cancel();
+});
+
+Deno.test("GET /member/service-worker.js → 200 JS when built", async () => {
+  const res = await handler(req("/member/service-worker.js"));
+  if (res.status === 503) return await res.body?.cancel();
+  assertEquals(res.status, 200);
+  assertStringIncludes(res.headers.get("content-type") ?? "", "javascript");
+  await res.body?.cancel();
+});
+
+Deno.test("health payloads expose external-API kill-switch states", async () => {
+  const res = await handler(req("/api/health"));
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body.externalApis, {
+    scrapecreators: "on",
+    ebay: "on",
+    barcodelookup: "off", // expired key — off by default until re-enabled
+  });
+
+  const os = await handler(req("/health"));
+  const osBody = await os.json();
+  assertEquals(osBody.externalApis.barcodelookup, "off");
+});
+
+Deno.test("EXTERNAL_API_SCRAPECREATORS=off → fetch-price 503, health off", async () => {
+  Deno.env.set("EXTERNAL_API_SCRAPECREATORS", "off");
+  try {
+    const res = await handler(
+      req("/api/unpriced-samples/123/fetch-price", { method: "POST" }),
+    );
+    assertEquals(res.status, 503);
+    const body = await res.json();
+    assertEquals(body, { ok: false, error: "scrapecreators disabled" });
+
+    const health = await (await handler(req("/api/health"))).json();
+    assertEquals(health.scrapeCreatorsConfigured, false);
+    assertEquals(health.externalApis.scrapecreators, "off");
+  } finally {
+    Deno.env.delete("EXTERNAL_API_SCRAPECREATORS");
+  }
+});
+
+Deno.test("EXTERNAL_API_EBAY=off → listing routes 503", async () => {
+  Deno.env.set("EXTERNAL_API_EBAY", "off");
+  try {
+    const runDue = await handler(
+      req("/api/listings/run-due", { method: "POST" }),
+    );
+    assertEquals(runDue.status, 503);
+    assertEquals((await runDue.json()).error, "ebay disabled");
+
+    const publish = await handler(req("/api/listings", {
+      method: "POST",
+      body: JSON.stringify({ sampleId: 1 }),
+    }));
+    assertEquals(publish.status, 503);
+    assertEquals((await publish.json()).error, "ebay disabled");
+
+    const verify = await handler(
+      req("/api/marketplaces/ebay/verify", { method: "POST" }),
+    );
+    assertEquals(verify.status, 503);
+    assertEquals((await verify.json()).detail, "ebay disabled");
+  } finally {
+    Deno.env.delete("EXTERNAL_API_EBAY");
+  }
+});
+
 Deno.test("marketplace APIs enforce methods regardless of DB", async () => {
   const runDue = await handler(req("/api/listings/run-due"));
   assertEquals(runDue.status, 405);

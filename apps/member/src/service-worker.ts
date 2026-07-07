@@ -11,7 +11,7 @@
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
-import { build, files, version } from '$service-worker';
+import { base, build, files, version } from '$service-worker';
 
 const CACHE_NAME = `lpos-member-${version}`;
 
@@ -64,7 +64,9 @@ sw.addEventListener('fetch', (event) => {
 				const cached = await caches.match(request);
 				if (cached) return cached;
 				if (request.mode === 'navigate') {
-					const root = await caches.match('/');
+					// App root under the shell's /member base (`build`/`files` above are
+					// already base-prefixed by Kit; only this literal needs `base`).
+					const root = (await caches.match(base + '/')) ?? (await caches.match(base));
 					if (root) return root;
 				}
 				return Response.error();

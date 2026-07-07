@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "exports": "./main.ts",
   "tasks": {
-    "dev": "deno run -A --watch main.ts",
-    "start": "deno run -A main.ts",
+    "dev": "deno run -A --env-file=../../.env --watch main.ts",
+    "start": "deno run -A --env-file=../../.env main.ts",
     "build": "deno task build:scan-client && deno task build:extension-zip",
     "build:scan-client": "deno bundle --platform browser -o static/scan-client.js ../../packages/relay/client.ts",
     "build:extension-zip": "deno run -A scripts/build-extension-zip.ts",

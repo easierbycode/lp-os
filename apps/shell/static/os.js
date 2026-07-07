@@ -266,10 +266,7 @@ function baseAppUrl(value, fallback) {
   return safe ? safe.replace(/\/+$/, "") : "";
 }
 
-const MEMBER_APP_URL = baseAppUrl(
-  OS_CONFIG.memberAppUrl,
-  "http://localhost:8080",
-);
+const MEMBER_APP_URL = baseAppUrl(OS_CONFIG.memberAppUrl, "/member");
 const INVENTORY_APP_URL = baseAppUrl(
   OS_CONFIG.inventoryAppUrl,
   "https://admin.thirsty.store",
@@ -277,8 +274,8 @@ const INVENTORY_APP_URL = baseAppUrl(
 const INVENTORY_ORIGIN = INVENTORY_APP_URL
   ? new URL(INVENTORY_APP_URL).origin
   : "";
-// External until the React kiosk is rebuilt inside LP-OS (LP-OS ships no React).
-const KIOSK_APP_URL = "https://thirsty.store/kiosk";
+// Same-origin: the kiosk is rebuilt inside LP-OS (static/kiosk.html + kiosk.js).
+const KIOSK_APP_URL = "/kiosk";
 const SCANNER_APP_URL = urlWithParams(
   OS_CONFIG.scannerAppUrl ||
     (INVENTORY_APP_URL ? INVENTORY_APP_URL + "/scanner" : ""),
@@ -332,11 +329,11 @@ const FOLDERS = [
         name: "Kiosk",
         icon: ICONS.qr,
         flag: "app.kiosk",
-        // The storefront still lives at thirsty.store/kiosk (external) until
-        // the kiosk is rebuilt inside LP-OS.
+        // The Inventory Manager kiosk, rebuilt vanilla inside LP-OS — served
+        // same-origin at /kiosk, so the postMessage scan/open-url fast path
+        // works again. No camera code in the kiosk; scans come off the relay.
         url: KIOSK_APP_URL,
-        allow: "fullscreen; camera",
-        external: true,
+        allow: "fullscreen",
         width: 1180,
         height: 780,
       },
@@ -482,14 +479,14 @@ const FOLDERS = [
         id: "tokscrape-dashboard",
         name: "App",
         icon: ICONS.mobile,
-        // The member dashboard route of the LP-OS SvelteKit member app
-        // (apps/member, served at MEMBER_APP_URL). Cross-origin in dev
-        // (different port), so it keeps the top-nav-blocking sandbox.
-        url: MEMBER_APP_URL + "/",
+        // The Cordova member mobile app (tok-scrape mobile-app), same
+        // third-party origin as the other demos — top-navigation-blocking
+        // sandbox applies.
+        url: "https://easierbycode.com/tok-scrape/mobile-app/www/",
         allow: "fullscreen",
         external: true,
-        // Phone-shaped window — the dashboard is mobile-first (matches Samples).
-        // `mobile` keeps its width fixed when snapped to a screen half.
+        // Phone-shaped window — it's a mobile app. `mobile` keeps its width
+        // fixed when snapped to a screen half.
         mobile: true,
         width: 430,
         height: 780,
@@ -498,8 +495,10 @@ const FOLDERS = [
         id: "member-web",
         name: "Web",
         icon: ICONS.browser,
-        // The member app's web/landing view (seller/streamer/content
-        // dashboards) — the /web route of the same SvelteKit app.
+        // The LP-OS SvelteKit member web app (apps/member), served
+        // same-origin at /member by the shell (MEMBER_APP_URL overrides for a
+        // split deploy). /web opens on the member dashboard inside the
+        // LifePreneur sidebar chrome.
         url: MEMBER_APP_URL + "/web",
         allow: "fullscreen",
         external: true,

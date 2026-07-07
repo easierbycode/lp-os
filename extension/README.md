@@ -21,8 +21,8 @@ dropped and not ported.)
 The background resolves the current LP-OS user in this order:
 
 1. **LP-OS shell tab** — any open tab with a `?user=<id>` query param that
-   looks like the LP-OS shell (host `localhost`/`127.0.0.1`, or tab title
-   containing "LP-OS"; production domain TBD).
+   looks like the LP-OS shell (host `thirsty.store` or `localhost`/
+   `127.0.0.1`, or tab title containing "LP-OS").
 2. **Popup override** — `chrome.storage.local.lpos_user`, set from the popup's
    text input.
 3. **Neither** → user `null` → **everything disabled**.
@@ -85,8 +85,8 @@ leaves the page unless the role-gated `order` scrape is injected and asks.
 - **One config.js** — the sources' two copies were identical except the header
   comment. `TOK_CONFIG`'s shape is preserved (`GRAYLOG_ENDPOINT`,
   `GRAYLOG_TOKEN`, `SHEET_ENDPOINT`, `SHEET_TOKEN`); the GELF endpoint now
-  defaults to LP-OS at `http://localhost:8000/gelf` (**production domain
-  TBD**), overridable per machine via `chrome.storage.local.lpos_gelf_endpoint`
+  defaults to production LP-OS at `https://thirsty.store/gelf`, overridable
+  per machine via `chrome.storage.local.lpos_gelf_endpoint`
   / `lpos_gelf_token` (pre-injected by background.js). The legacy shim token
   is kept so `_graylog_key` keeps passing the ingest gate.
 - **Payload scripts carried over byte-for-byte** — `scrape-creator.js`,

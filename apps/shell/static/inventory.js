@@ -32,26 +32,6 @@ const globalQuery = document.getElementById("global-query");
 globalQuery.value = "";
 globalQuery.focus();
 
-// The top bar toggles between Search (default) and Intake -- only one is shown.
-const searchForm = document.getElementById("global-search");
-const intakeForm = document.getElementById("sample-intake");
-const intakeHint = document.getElementById("intake-result");
-const modeSearchBtn = document.getElementById("mode-search");
-const modeIntakeBtn = document.getElementById("mode-intake");
-
-function setMode(mode) {
-  const intake = mode === "intake";
-  searchForm.classList.toggle("hidden", intake);
-  intakeForm.classList.toggle("hidden", !intake);
-  intakeHint.classList.toggle("hidden", !intake);
-  modeSearchBtn.classList.toggle("active", !intake);
-  modeIntakeBtn.classList.toggle("active", intake);
-  (intake ? intakeForm.querySelector("input") : globalQuery).focus();
-}
-
-modeSearchBtn.addEventListener("click", () => setMode("search"));
-modeIntakeBtn.addEventListener("click", () => setMode("intake"));
-
 // Collapsible panels: clicking a section header (or its chevron) slides the
 // body open/closed. The chevron points down when open, right when collapsed.
 for (const head of document.querySelectorAll("section.panel > .section-head")) {
@@ -77,16 +57,6 @@ document.getElementById("global-search").addEventListener(
     if (/^\d{6,}$/.test(query)) loadProduct(query);
   },
 );
-
-document.getElementById("sample-intake").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
-  document.getElementById("intake-result").textContent = `Staged ${
-    data.barcode || "sample"
-  } for product ${data.productId || "unknown"} at ${
-    data.location || "unassigned"
-  }.`;
-});
 
 document.getElementById("unpriced-refresh").addEventListener("click", () => {
   loadUnpricedSamples();
