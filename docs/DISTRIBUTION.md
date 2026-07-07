@@ -72,6 +72,16 @@ Why the task flags are what they are:
   `packages/relay/client.ts` and testing in dev.
 - `--no-check` (member): the adapter's generated `.deno-deploy/` output does not
   typecheck; `npm run check` (svelte-check) covers the real sources.
+- The shell opens at full screen size: `maximizeDesktopWindow()` in `main.ts`
+  adopts the runtime's startup window (first `new Deno.BrowserWindow()`) after
+  the server answers `/health`, reads `screen.availWidth/Height` via
+  `executeJs`, and calls `setPosition(0,0)` + `setSize` — deno 2.9 has no
+  maximize/fullscreen API. Gotchas baked into that code: adopting *before* the
+  server is up strands the window on the placeholder page, and `executeJs`
+  resolves with the value wrapped as `{ ok, value }` (CEF backend at least).
+- Launch Windows bundles via `<Name>.bat`, not `laufey.exe` directly — the
+  `.bat` passes `--runtime <Name>.dll`; a bare `laufey.exe` is an empty host
+  showing example.com at 800×600.
 - App name/identifier/icons/output live in each app's `deno.json` `"desktop"`
   block. Cross-compile with `--target <triple>` or `--all-targets` (linux
   x64/arm64, windows x64, mac x64/arm64 — **no Windows ARM64 target exists**).
