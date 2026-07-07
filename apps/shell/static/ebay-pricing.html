@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>eBay Pricing · LP-OS Demos</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070a12; --card: #11151f; --border: #1d2433; --fg: #eef1f6; --muted: #9aa6bd;
+      --orange: #fb923c; --green: #22c55e; --sky: #38bdf8; --gold: #ffe27a; --red: #f87171;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(120% 120% at 80% -10%, #131a2b, var(--bg) 60%); color: var(--fg);
+      padding: 22px 20px 40px;
+    }
+    a { color: var(--sky); }
+    .head { max-width: 1080px; margin: 0 auto 14px; }
+    .head h1 { margin: 0 0 4px; font-size: 22px; display: flex; align-items: center; gap: 10px; }
+    .head .logo { font-weight: 800; letter-spacing: -.5px; }
+    .head .logo .e{color:#e53238}.head .logo .b{color:#0064d2}.head .logo .a{color:#f5af02}.head .logo .y{color:#86b817}
+    .head p { margin: 0; color: var(--muted); font-size: 13px; }
+    .status { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .status b { color: var(--gold); }
+
+    /* ---- product hero: which product is being priced ---- */
+    .product { max-width: 1080px; margin: 0 auto 18px; position: relative; }
+    .product-card {
+      display: flex; align-items: center; gap: 16px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
+    }
+    .p-img {
+      width: 76px; height: 76px; border-radius: 12px; flex-shrink: 0; overflow: hidden;
+      display: grid; place-items: center; font-size: 40px; background: #1a2030;
+      border: 1px solid var(--border);
+    }
+    .p-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .p-info { min-width: 0; flex: 1; }
+    .p-kicker { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--orange); font-weight: 700; }
+    .p-name { font-size: 19px; font-weight: 700; margin: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .p-meta { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .p-meta b { color: var(--fg); }
+    .p-change {
+      flex-shrink: 0; background: #0c111b; border: 1px solid var(--border); color: var(--fg);
+      border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .p-change:hover, .p-change[aria-expanded="true"] { border-color: var(--orange); }
+
+    /* visual catalog dropdown */
+    .p-menu {
+      position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; width: min(460px, 100%);
+      background: #0e1320; border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.55); padding: 8px; max-height: 380px;
+      display: flex; flex-direction: column;
+    }
+    .p-menu[hidden] { display: none; }
+    .p-menu input {
+      width: 100%; background: #0c111b; border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; color: var(--fg); font-size: 13px; margin-bottom: 8px;
+    }
+    .p-list { overflow-y: auto; }
+    .p-opt {
+      display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+      background: none; border: 0; border-radius: 9px; padding: 7px 8px; cursor: pointer; color: var(--fg);
+    }
+    .p-opt:hover, .p-opt.active { background: #17203499; }
+    .p-opt[aria-selected="true"] { background: #17110b; outline: 1px solid #7d5a2f; }
+    .p-opt .thumb {
+      width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0; overflow: hidden;
+      display: grid; place-items: center; font-size: 22px; background: #1a2030; border: 1px solid var(--border);
+    }
+    .p-opt .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .p-opt .txt { min-width: 0; flex: 1; }
+    .p-opt .nm { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .p-opt .br { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .p-opt .pr { font-size: 13px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+    .p-empty { color: var(--muted); font-size: 12.5px; text-align: center; padding: 14px 0; }
+
+    .wrap { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 340px 1fr; gap: 18px; }
+    @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .card h2 { margin: 0 0 14px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+
+    .fld { margin-bottom: 15px; }
+    .fld label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+    .fld label b { color: var(--fg); font-variant-numeric: tabular-nums; }
+    .fld input[type=range] { width: 100%; accent-color: var(--orange); }
+    .fld input[type=text] {
+      width: 100%; background: #0c111b; border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; color: var(--fg); font-size: 13px;
+    }
+    .seg { display: flex; gap: 6px; }
+    .seg button { flex: 1; background: #0c111b; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 8px; padding: 8px; font-size: 13px; cursor: pointer; }
+    .seg button.on { border-color: var(--orange); color: var(--fg); background: #17110b; }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+    .presets button { background: #0c111b; border: 1px solid var(--border); color: var(--sky);
+      border-radius: 999px; padding: 5px 11px; font-size: 12px; cursor: pointer; }
+    .presets button:hover { border-color: var(--sky); }
+
+    /* headline result */
+    .price { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+    .price .big { font-size: 46px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 24px rgba(255,210,80,.25); }
+    .price .pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid; }
+    .pill.floor { color: var(--red); border-color: #7d2f2f; }
+    .pill.warn { color: var(--orange); border-color: #7d5a2f; }
+    .pill.low { color: var(--sky); border-color: #24566c; }
+    .pill.ok { color: var(--green); border-color: #2f7d4f; }
+    .explain { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+    .explain b { color: var(--fg); }
+
+    /* formula strip — the same walk the Marketplace Ask-price popover shows */
+    .strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 14px 0 2px; }
+    .strip .step { background: #0c111b; border: 1px solid var(--border); border-radius: 8px;
+      padding: 5px 9px; font-size: 12px; color: var(--fg); font-variant-numeric: tabular-nums; }
+    .strip .step b { color: var(--gold); }
+    .strip .arr { color: var(--muted); font-size: 12px; }
+
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0 4px; }
+    @media (max-width: 560px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+    .metric { background: #0c111b; border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; }
+    .metric .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+    .metric .v { font-weight: 700; font-size: 16px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+    /* price map */
+    .map { margin: 20px 0 6px; }
+    .map .track { position: relative; height: 54px; margin: 26px 6px 30px; border-radius: 8px;
+      background: linear-gradient(90deg, #1a1f2c, #10141d); border: 1px solid var(--border); }
+    .mk { position: absolute; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); }
+    .mk .cap { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; }
+    .mk .cap.top { top: -22px; } .mk .cap.bot { bottom: -24px; }
+    .mk.floor { background: var(--red); } .mk.floor .cap { color: var(--red); }
+    .mk.ceiling { background: var(--green); } .mk.ceiling .cap { color: var(--green); }
+    .mk.comp { background: var(--sky); } .mk.comp .cap { color: var(--sky); }
+    .mk.retail { background: #6b7280; } .mk.retail .cap { color: #9aa3af; }
+    .mk.price { background: var(--gold); width: 4px; box-shadow: 0 0 12px rgba(255,210,80,.6); }
+    .mk.price .cap { color: var(--gold); font-weight: 800; font-size: 13px; }
+    .mk.dot .cap.bot { display: none; }
+    .band { position: absolute; top: 0; bottom: 0; background: rgba(56,189,248,.10); border-left: 1px dashed rgba(56,189,248,.4);
+      border-right: 1px dashed rgba(56,189,248,.4); }
+    .band .lab { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 11px; color: var(--sky); white-space: nowrap; }
+
+    /* ladder */
+    .ladder { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin: 14px 4px 6px; }
+    .rung { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+    .rung .bar { width: 100%; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--orange), #b45309); min-height: 3px;
+      transition: height .3s ease; position: relative; }
+    .rung.floorhit .bar { background: linear-gradient(180deg, var(--red), #7f1d1d); }
+    .rung .bar .p { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--fg);
+      font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .rung .d { font-size: 11px; color: var(--muted); }
+    .foot { max-width: 1080px; margin: 18px auto 0; color: var(--muted); font-size: 12px; }
+    .foot code { color: var(--sky); background: #0c1320; border: 1px solid #1d2c40; border-radius: 5px; padding: 1px 6px; }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <h1><span class="logo"><span class="e">e</span><span class="b">B</span><span class="a">a</span><span class="y">y</span></span> Pricing <span style="color:var(--muted);font-size:14px;font-weight:400">· LP-OS Demos</span></h1>
+    <p>Undercut the competition · move product fast · a fee-aware floor so we never list at a loss.</p>
+    <div class="status" id="status">loading catalog…</div>
+  </div>
+
+  <div class="product">
+    <div class="product-card">
+      <div class="p-img" id="p-img">🏷️</div>
+      <div class="p-info">
+        <div class="p-kicker">Pricing this product</div>
+        <div class="p-name" id="p-name">—</div>
+        <div class="p-meta" id="p-meta">—</div>
+      </div>
+      <button class="p-change" id="p-change" aria-haspopup="listbox" aria-expanded="false">Change product ▾</button>
+    </div>
+    <div class="p-menu" id="p-menu" hidden>
+      <input id="p-search" placeholder="Search products…" autocomplete="off" spellcheck="false"
+        role="combobox" aria-expanded="true" aria-controls="p-list" />
+      <div class="p-list" id="p-list" role="listbox" aria-label="Catalog products"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>Scenarios &amp; inputs</h2>
+
+      <div class="presets" id="presets"></div>
+
+      <div class="fld" style="margin-top:14px">
+        <label>Retail / MSRP <b id="retail-v">$—</b></label>
+        <input type="range" id="retail" min="0" max="300" step="0.01" value="90" />
+      </div>
+      <div class="fld">
+        <label>Cost basis <b id="cost-v">$0</b></label>
+        <input type="range" id="cost" min="0" max="60" step="1" value="0" />
+      </div>
+      <div class="fld">
+        <label>Competitor prices — illustrative, edit with real comps</label>
+        <input type="text" id="comps" value="" placeholder="e.g. 58, 62, 65 (blank = none)" />
+      </div>
+      <div class="fld">
+        <label>Condition</label>
+        <div class="seg" id="cond">
+          <button data-v="new" class="on">New / sealed</button>
+          <button data-v="used">Used</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label>Days listed (age) <b id="days-v">0d</b></label>
+        <input type="range" id="days" min="0" max="45" step="1" value="0" />
+      </div>
+      <div class="fld">
+        <label>Min net margin <b id="margin-v">$3</b></label>
+        <input type="range" id="margin" min="0" max="20" step="0.5" value="3" />
+      </div>
+      <div class="fld">
+        <label>eBay fee <b id="fee-v">13.25%</b></label>
+        <input type="range" id="fee" min="0" max="25" step="0.25" value="13.25" />
+      </div>
+      <div class="fld">
+        <label>Undercut <b id="under-v">5%</b></label>
+        <input type="range" id="under" min="0" max="25" step="1" value="5" />
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Recommended eBay Buy-It-Now</h2>
+      <div class="price">
+        <div class="big" id="big">$—</div>
+        <span id="pills"></span>
+      </div>
+      <p class="explain" id="explain">—</p>
+
+      <div class="strip" id="strip"></div>
+
+      <div class="metrics">
+        <div class="metric"><div class="k">Floor (break-even)</div><div class="v" id="m-floor">$—</div></div>
+        <div class="metric"><div class="k">Anchor</div><div class="v" id="m-anchor">$—</div></div>
+        <div class="metric"><div class="k">Ceiling</div><div class="v" id="m-ceiling">$—</div></div>
+        <div class="metric"><div class="k">Net profit</div><div class="v" id="m-net">$—</div></div>
+      </div>
+
+      <div class="map">
+        <h2 style="margin-top:14px">Price map</h2>
+        <div class="track" id="track"></div>
+      </div>
+
+      <h2>Velocity walk-down (price as the unit ages)</h2>
+      <div class="ladder" id="ladder"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    One formula, three surfaces: this page, the Marketplace window's Ask-price suggestion, and the CLI demo
+    (<code>deno task demo:ebay-pricing</code>) all run <code>packages/marketplace/ebay-pricing.ts</code> via
+    <code>POST /api/ebay-price</code>.
+  </div>
+
+  <script>
+    "use strict";
+    const $ = (id) => document.getElementById(id);
+    const usd = (n) => n == null || !isFinite(n) ? "$—" : "$" + Number(n).toFixed(2);
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+
+    /* ---------------------------------------------------------- catalog -- */
+    // Curated fallback batch (emoji art, same six as the E2E demo) — used when
+    // /api/products can't supply real inventory (no DATABASE_URL, empty table).
+    const TILE = ["#3a2a5e", "#264a63", "#5e2a3a", "#2a5e4a", "#5e4a2a", "#2a3a5e"];
+    const FALLBACK_PRODUCTS = [
+      { name: "Ninja AF101 Air Fryer 4qt", brand: "Ninja", retail: 89.99, emoji: "🍳" },
+      { name: "Stanley Quencher H2.0 40oz", brand: "Stanley", retail: 45.00, emoji: "🥤" },
+      { name: "CeraVe Moisturizing Bundle", brand: "CeraVe", retail: 38.99, emoji: "🧴" },
+      { name: "Olaplex No.3 Hair Perfector", brand: "Olaplex", retail: 30.00, emoji: "💆" },
+      { name: "Tide PODS (81 ct)", brand: "Tide", retail: 24.99, emoji: "🧺" },
+      { name: "Crest 3D White (3-pack)", brand: "Crest", retail: 14.97, emoji: "🪥" },
+    ].map((p, i) => ({ ...p, productId: "", image: null, creator: null, tile: TILE[i % TILE.length] }));
+
+    let PRODUCTS = [];
+    let liveCatalog = false;
+    let current = null;
+    let deepLinkMiss = ""; // ?product= id that wasn't in the catalog
+    let touched = false; // user changed inputs before the catalog arrived
+
+    async function loadCatalog() {
+      try {
+        const r = await fetch("/api/products");
+        if (r.ok) {
+          const rows = await r.json();
+          // Unpriced samples (current_price null) stay in: the Marketplace
+          // popover deep-links them here, and pricing one demonstrates the
+          // fee-floor fallback. retail 0 renders as "unpriced".
+          const mapped = (Array.isArray(rows) ? rows : [])
+            .filter((p) => p && p.name)
+            .map((p, i) => ({
+              productId: String(p.productId || ""),
+              name: String(p.name),
+              brand: String(p.seller && p.seller !== "Unknown seller" ? p.seller : "TikTok Shop"),
+              retail: Number(p.min_sku_original_price) || 0,
+              image: p.image ? String(p.image) : null,
+              creator: p.creator ? String(p.creator) : null,
+              emoji: "📦",
+              tile: TILE[i % TILE.length],
+            }));
+          if (mapped.length) { PRODUCTS = mapped; liveCatalog = true; }
+        }
+      } catch { /* fall back below */ }
+      if (!PRODUCTS.length) PRODUCTS = FALLBACK_PRODUCTS;
+
+      // Preselect: ?product= deep link (the Marketplace popover links here),
+      // else the priciest product — the biggest resale story. A deep-link
+      // miss is surfaced in the status line rather than silently swapped.
+      const want = new URLSearchParams(location.search).get("product");
+      const match = want ? PRODUCTS.find((p) => p.productId === want) : null;
+      if (want && !match) deepLinkMiss = want;
+      selectProduct(
+        match || PRODUCTS.reduce((m, p) => (p.retail > m.retail ? p : m), PRODUCTS[0]),
+        touched, // don't stomp inputs the user already changed while loading
+      );
+      renderMenu(searchEl.value); // keep any filter typed while loading
+    }
+
+    /* --------------------------------------------- product hero + picker -- */
+    function thumbHtml(p, big) {
+      if (p.image) {
+        return `<img src="${esc(p.image)}" alt="" loading="lazy"
+          onerror="this.parentNode.style.background='${esc(p.tile)}';this.parentNode.textContent='${esc(p.emoji)}'">`;
+      }
+      return esc(p.emoji);
+    }
+
+    function renderHero() {
+      const p = current;
+      const img = $("p-img");
+      img.style.background = p.image ? "#1a2030" : p.tile;
+      img.innerHTML = thumbHtml(p, true);
+      $("p-name").textContent = p.name;
+      $("p-name").title = p.name;
+      $("p-meta").innerHTML = `${esc(p.brand)} · retail <b>${
+        p.retail > 0 ? usd(p.retail) : "unpriced"
+      }</b>` +
+        (p.creator ? ` · creator <b>${esc(p.creator)}</b>` : "") +
+        (p.productId ? ` · id ${esc(p.productId)}` : " · demo product");
+    }
+
+    const menu = $("p-menu"), changeBtn = $("p-change"), searchEl = $("p-search");
+
+    function renderMenu(query) {
+      const q = query.trim().toLowerCase();
+      const list = $("p-list");
+      const items = PRODUCTS.filter((p) =>
+        !q || p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)
+      );
+      if (!items.length) {
+        list.innerHTML = `<div class="p-empty">No products match “${esc(query)}”.</div>`;
+        return;
+      }
+      list.innerHTML = items.map((p) => {
+        const idx = PRODUCTS.indexOf(p);
+        const sel = p === current;
+        return `<button class="p-opt" role="option" data-idx="${idx}" aria-selected="${sel}">
+          <span class="thumb" style="background:${p.image ? "#1a2030" : esc(p.tile)}">${thumbHtml(p)}</span>
+          <span class="txt"><span class="nm">${esc(p.name)}</span><span class="br">${esc(p.brand)}${
+            p.creator ? " · " + esc(p.creator) : ""
+          }</span></span>
+          <span class="pr">${p.retail > 0 ? usd(p.retail) : "—"}</span>
+        </button>`;
+      }).join("");
+      for (const btn of list.querySelectorAll(".p-opt")) {
+        btn.addEventListener("click", () => {
+          deepLinkMiss = ""; // an explicit pick supersedes the missed link
+          selectProduct(PRODUCTS[Number(btn.dataset.idx)]);
+          closeMenu();
+        });
+      }
+    }
+
+    function openMenu() {
+      menu.hidden = false;
+      changeBtn.setAttribute("aria-expanded", "true");
+      searchEl.value = "";
+      renderMenu("");
+      searchEl.focus();
+    }
+    function closeMenu() {
+      menu.hidden = true;
+      changeBtn.setAttribute("aria-expanded", "false");
+    }
+    changeBtn.addEventListener("click", () => (menu.hidden ? openMenu() : closeMenu()));
+    searchEl.addEventListener("input", () => renderMenu(searchEl.value));
+    document.addEventListener("click", (e) => {
+      if (!menu.hidden && !menu.contains(e.target) && e.target !== changeBtn) closeMenu();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !menu.hidden) { closeMenu(); changeBtn.focus(); }
+    });
+
+    /* ------------------------------------------------------------ inputs -- */
+    let condition = "new";
+    $("cond").addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      touched = true;
+      condition = b.dataset.v;
+      syncCond();
+      schedule();
+    });
+    function syncCond() {
+      for (const c of $("cond").children) c.classList.toggle("on", c.dataset.v === condition);
+    }
+
+    // Illustrative comps derived from retail so the formula can demonstrate its
+    // headline move (undercutting the cheapest credible comp). Demo inputs only
+    // — the price shown is the genuine formula output from /api/ebay-price.
+    function synthComps(retail) {
+      if (!(retail > 0)) return [];
+      return [0.62, 0.66, 0.71].map((f) => (Math.round(retail * f * 100) / 100).toFixed(2));
+    }
+
+    function selectProduct(p, keepInputs) {
+      current = p;
+      renderHero();
+      // keepInputs = the user was already mid-edit (catalog arrived late):
+      // attach the product identity but leave every input alone.
+      if (!keepInputs) {
+        const retailSlider = $("retail");
+        retailSlider.max = Math.max(300, Math.ceil(p.retail * 1.5));
+        retailSlider.value = p.retail;
+        $("comps").value = synthComps(p.retail).join(", ");
+        $("cost").value = 0;
+        $("days").value = 0;
+        condition = "new";
+        syncCond();
+      }
+      const u = new URL(location.href);
+      if (p.productId) u.searchParams.set("product", p.productId);
+      else u.searchParams.delete("product");
+      history.replaceState(null, "", u);
+      sync(); schedule();
+    }
+
+    // Scenario chips: unlike data-pimp's presets these keep the SELECTED product
+    // and vary the market conditions around it.
+    const SCENARIOS = [
+      { label: "🔥 Fresh + comps", set: (r) => ({ comps: synthComps(r).join(", "), days: 0, cost: 0, cond: "new" }) },
+      { label: "🕗 Aged 21 days", set: (r) => ({ comps: synthComps(r).join(", "), days: 21, cost: 0, cond: "new" }) },
+      { label: "❓ No comps", set: () => ({ comps: "", days: 0, cost: 0, cond: "new" }) },
+      { label: "📉 Market below floor", set: () => {
+        // Comps just under the fee-aware floor implied by the CURRENT
+        // margin/fee sliders. Retail must be cleared: with retail set, the
+        // engine's outlier guard discards comps below retail × 0.05, which
+        // for any product over ~$62 would drop these and silently demo
+        // retail-band anchoring instead of the floor.
+        const fee = Number($("fee").value) / 100;
+        const floor = (Number($("margin").value) + 0.30) / Math.max(0.1, 1 - fee);
+        const c = (f) => (Math.round(floor * f * 100) / 100).toFixed(2);
+        return { retail: 0, comps: `${c(0.72)}, ${c(0.82)}`, days: 25, cost: 0, cond: "new" };
+      } },
+      { label: "🎯 Lowball outlier", set: (r) => {
+        const c = (f) => (Math.round(r * f * 100) / 100).toFixed(2);
+        return { comps: [c(0.08), c(0.64), c(0.67), c(0.70)].join(", "), days: 0, cost: 0, cond: "used" };
+      } },
+      { label: "📦 Agency lot ($8 cost)", set: () => ({ comps: "", days: 40, cost: 8, cond: "used" }) },
+    ];
+    for (const s of SCENARIOS) {
+      const b = document.createElement("button");
+      b.textContent = s.label;
+      b.onclick = () => {
+        touched = true;
+        const v = s.set(Number($("retail").value));
+        if (v.retail !== undefined) $("retail").value = v.retail;
+        $("comps").value = v.comps;
+        $("days").value = v.days;
+        $("cost").value = v.cost;
+        condition = v.cond;
+        syncCond();
+        sync(); schedule();
+      };
+      $("presets").appendChild(b);
+    }
+
+    function sync() {
+      $("retail-v").textContent = Number($("retail").value) > 0 ? usd($("retail").value) : "none";
+      $("cost-v").textContent = "$" + $("cost").value;
+      $("days-v").textContent = $("days").value + "d";
+      $("margin-v").textContent = "$" + $("margin").value;
+      $("fee-v").textContent = Number($("fee").value).toFixed(2) + "%";
+      $("under-v").textContent = $("under").value + "%";
+    }
+    for (const id of ["retail", "cost", "comps", "days", "margin", "fee", "under"]) {
+      $(id).addEventListener("input", () => { touched = true; sync(); schedule(); });
+    }
+
+    function buildInput() {
+      const retail = Number($("retail").value);
+      const comps = $("comps").value.split(",").map((s) => s.trim()).filter(Boolean);
+      return {
+        retail: retail > 0 ? retail : undefined,
+        costBasis: Number($("cost").value),
+        comps,
+        condition,
+        daysListed: Number($("days").value),
+        minMarginAbs: Number($("margin").value),
+        feePct: Number($("fee").value) / 100,
+        undercutPct: Number($("under").value) / 100,
+        ladder: true,
+      };
+    }
+
+    /* --------------------------------------------------------- run + API -- */
+    let timer = null, seq = 0;
+    function schedule() { clearTimeout(timer); timer = setTimeout(run, 120); }
+
+    async function run() {
+      const input = buildInput();
+      const mySeq = ++seq;
+      try {
+        const r = await fetch("/api/ebay-price", {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
+        });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const res = await r.json();
+        if (mySeq !== seq) return; // a newer request already landed
+        render(input, res);
+        $("status").innerHTML = "live · <b>POST /api/ebay-price</b> · catalog: " +
+          (liveCatalog
+            ? "<b>" + PRODUCTS.length + " inventory products</b>"
+            : "demo batch (no DATABASE_URL / empty inventory)") +
+          (deepLinkMiss
+            ? ' · <span style="color:var(--orange)">⚠ product ' + esc(deepLinkMiss) +
+              " not in the catalog — showing " + esc(current ? current.name.slice(0, 40) : "") + "</span>"
+            : "");
+      } catch (e) {
+        if (mySeq !== seq) return;
+        $("status").innerHTML = "⚠ API unreachable (" + esc(e.message) +
+          ") — run the LP-OS shell (<b>deno task dev</b>) and open <b>/demos/ebay-pricing</b>.";
+      }
+    }
+
+    /* ------------------------------------------------------------ render -- */
+    function render(input, r) {
+      $("big").textContent = usd(r.price);
+      $("explain").innerHTML = esc(r.explanation);
+      $("m-floor").textContent = usd(r.floor);
+      $("m-anchor").textContent = r.anchor == null ? "—" : usd(r.anchor) + " (" + esc(r.anchorSource) + ")";
+      $("m-ceiling").textContent = usd(r.ceiling);
+      $("m-net").textContent = usd(r.netAtPrice);
+
+      const pills = [];
+      if (r.floorHit) pills.push('<span class="pill floor">floor holds</span>');
+      if (r.unprofitableBelowRetail) pills.push('<span class="pill warn">⚠ below-retail loss risk</span>');
+      if (r.lowConfidence) pills.push('<span class="pill low">single comp</span>');
+      if (!r.floorHit && r.anchorSource === "comp") {
+        pills.push('<span class="pill ok">undercuts market by ' + usd(r.undercutFromAnchor) + '</span>');
+      }
+      if (r.ageFactor < 1) pills.push('<span class="pill low">−' + Math.round((1 - r.ageFactor) * 100) + '% aged</span>');
+      $("pills").innerHTML = pills.join(" ");
+
+      renderStrip(input, r);
+      renderMap(input, r);
+      renderLadder(r.ladder || []);
+    }
+
+    // The formula, step by step, with this run's real numbers — mirrors the
+    // Marketplace window's Ask-price popover.
+    function renderStrip(input, r) {
+      const steps = [];
+      // Engine order (STEP 3 → 4): the used haircut applies to the ANCHOR
+      // before the undercut is computed from the haircut value.
+      const usedStep = input.condition === "used" && r.anchorSource !== "floor"
+        ? `× 0.85 used haircut`
+        : null;
+      if (r.anchorSource === "comp") {
+        steps.push(`anchor <b>${usd(r.anchor)}</b> cheapest credible comp`);
+        if (usedStep) steps.push(usedStep);
+        steps.push(r.lowConfidence
+          ? `− max(3%, $0.50) gentle undercut`
+          : `− max(${Math.round((input.undercutPct ?? 0.05) * 100)}%, $1) undercut`);
+      } else if (r.anchorSource === "retail") {
+        const pct = input.retail ? Math.round((r.anchor / Number(input.retail)) * 100) : 30;
+        steps.push(`anchor <b>${usd(r.anchor)}</b> = retail × ${pct}% resale band`);
+        if (usedStep) steps.push(usedStep);
+      } else {
+        steps.push(`no comps or retail — <b>fee-aware floor</b> drives the price`);
+      }
+      if (r.ageFactor < 1) steps.push(`× ${r.ageFactor.toFixed(2)} aged ${r.daysListed}d`);
+      steps.push(`clamp [${usd(r.floor)} … ${usd(r.ceiling)}]`);
+      // Floor-bound prices are deliberately NOT charm-rounded (engine STEP 8).
+      steps.push(Math.round(r.price * 100) % 100 === 99
+        ? `charm .99 → <b>${usd(r.price)}</b>`
+        : `→ <b>${usd(r.price)}</b>${r.floorHit ? " exact floor" : ""}`);
+      $("strip").innerHTML = steps
+        .map((s) => `<span class="step">${s}</span>`)
+        .join('<span class="arr">→</span>');
+    }
+
+    function renderMap(input, r) {
+      // Parse comps the way the engine's num() does ("$58" → 58) so the map's
+      // cheapest-comp marker matches the anchor the API actually used.
+      const comps = (input.comps || [])
+        .map((s) => Number(String(s).replace(/[$,\s]/g, "")))
+        .filter((n) => n > 0);
+      const cheapest = comps.length ? Math.min.apply(null, comps) : null;
+      const pts = [r.price, r.floor, r.ceiling, cheapest, input.retail].filter((n) => n != null && isFinite(n));
+      const max = Math.max.apply(null, pts) * 1.12 || 10;
+      const track = $("track"); track.innerHTML = "";
+      const pos = (v) => Math.max(0, Math.min(100, (v / max) * 100));
+
+      // undercut band between recommended price and cheapest comp
+      if (cheapest != null && r.price < cheapest) {
+        const band = document.createElement("div"); band.className = "band";
+        const a = pos(r.price), b = pos(cheapest);
+        band.style.left = a + "%"; band.style.width = (b - a) + "%";
+        band.innerHTML = '<span class="lab">undercut</span>';
+        track.appendChild(band);
+      }
+      function mark(v, cls, capTop, capBot, dot) {
+        if (v == null || !isFinite(v)) return;
+        const el = document.createElement("div"); el.className = "mk " + cls + (dot ? " dot" : "");
+        el.style.left = pos(v) + "%";
+        el.innerHTML = (capTop ? '<span class="cap top">' + capTop + "</span>" : "") +
+          (capBot ? '<span class="cap bot">' + capBot + "</span>" : "");
+        track.appendChild(el);
+      }
+      mark(input.retail, "retail", null, input.retail ? "retail " + usd(input.retail) : null, true);
+      mark(r.ceiling, "ceiling", "ceiling " + usd(r.ceiling), null);
+      mark(cheapest, "comp", "cheapest comp " + usd(cheapest), null);
+      mark(r.floor, "floor", null, "floor " + usd(r.floor));
+      mark(r.price, "price", "YOU " + usd(r.price), null);
+    }
+
+    function renderLadder(rows) {
+      const box = $("ladder"); box.innerHTML = "";
+      if (!rows.length) return;
+      const max = Math.max.apply(null, rows.map((r) => r.price)) || 1;
+      for (const row of rows) {
+        const d = document.createElement("div"); d.className = "rung" + (row.floorHit ? " floorhit" : "");
+        const h = Math.max(4, Math.round((row.price / max) * 100));
+        d.innerHTML = '<div class="bar" style="height:' + h + '%"><span class="p">' + usd(row.price) + '</span></div>' +
+          '<div class="d">' + row.day + "d</div>";
+        box.appendChild(d);
+      }
+    }
+
+    sync();
+    loadCatalog();
+  </script>
+</body>
+</html>

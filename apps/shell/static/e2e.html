@@ -953,13 +953,10 @@
       z-index: 2;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      * {
-        transition: none !important;
-        animation: none !important;
-      }
-    }
-    </style>
+    /* No prefers-reduced-motion override here on purpose: this page IS the
+       animation (a self-running demo with an explicit Replay button), and
+       honoring the OS flag froze the whole showcase into a static screen. */
+</style>
   </head>
   <body>
     <div class="topbar">

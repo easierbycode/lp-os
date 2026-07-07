@@ -110,6 +110,16 @@
     .row > div {
       flex: 1;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    /* A wrapping label (e.g. "Ask price $ (blank = …)") must not push its
+       input down: labels absorb the extra height, inputs stay bottom-aligned
+       across the row. */
+    .row > div label {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
     }
     .btns {
       display: flex;
@@ -318,6 +328,158 @@
       text-align: center;
       padding: 18px 0;
     }
+    /* Ask-price suggestion (eBay pricing formula) — panel + minimized chip */
+    .formula {
+      margin-top: 12px;
+      border: 1px solid rgba(232,101,10,.35);
+      background: rgba(232,101,10,.07);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+    }
+    .formula .fx-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .formula .fx-head b {
+      color: var(--accent-2);
+      font-size: 15px;
+    }
+    .fx-mini {
+      padding: 0 9px;
+      line-height: 19px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .fx-steps {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      margin: 8px 0;
+    }
+    .fx-step {
+      background: #0d1016;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 3px 7px;
+      font-variant-numeric: tabular-nums;
+    }
+    .fx-arr {
+      color: var(--faint);
+    }
+    .fx-note a {
+      color: var(--accent-2);
+    }
+    .fx-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      border: 1px solid rgba(232,101,10,.5);
+      background: var(--accent-soft);
+      color: var(--accent-2);
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .fx-chip:hover {
+      border-color: var(--accent);
+    }
+    .fx-chip[hidden],
+    .formula[hidden] {
+      display: none;
+    }
+    /* Collapsible / re-orderable cards */
+    .card-hd {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .card-hd h2 {
+      margin: 0;
+    }
+    /* The title itself is the collapse/expand disclosure button (whole-header
+       clicks still toggle via delegation). */
+    .card-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: inherit;
+      text-transform: inherit;
+      letter-spacing: inherit;
+      cursor: pointer;
+    }
+    .card-toggle:focus-visible {
+      outline: 1px solid var(--accent);
+      outline-offset: 4px;
+      border-radius: 6px;
+    }
+    .card-grip {
+      padding: 0 4px;
+      border: 0;
+      background: none;
+      color: var(--faint);
+      font-size: 13px;
+      line-height: 1;
+      cursor: grab;
+    }
+    .card-grip:hover {
+      color: var(--accent-2);
+    }
+    .card-grip:active {
+      cursor: grabbing;
+    }
+    .card-chevron {
+      color: var(--muted);
+      font-size: 10px;
+      transition: transform .15s ease;
+    }
+    .card.collapsed .card-chevron {
+      transform: rotate(-90deg);
+    }
+    .card-ctl {
+      display: inline-flex;
+      gap: 4px;
+    }
+    .card-ctl button {
+      padding: 1px 8px;
+      font-size: 12px;
+      line-height: 18px;
+      border-radius: 6px;
+      color: var(--muted);
+    }
+    .card-ctl button:hover:not(:disabled) {
+      color: var(--text);
+    }
+    .card-ctl button:disabled {
+      opacity: .35;
+      cursor: default;
+    }
+    .card-body {
+      margin-top: 10px;
+    }
+    .card.collapsed .card-body {
+      display: none;
+    }
+    .card.dragging {
+      opacity: .45;
+    }
+    .card.drag-over-top {
+      box-shadow: 0 -3px 0 0 var(--accent);
+    }
+    .card.drag-over-bottom {
+      box-shadow: 0 3px 0 0 var(--accent);
+    }
     </style>
   </head>
   <body>
@@ -334,8 +496,20 @@
       <p
         class="sub">List samples for sale on eBay — the first of the initial three marketplaces. Credentials stay on this LP-OS server (Postgres), are never shown back whole, and are never written to the event log.</p>
 
-      <div class="card">
-        <h2>eBay connection <span id="env-chip" class="chip"><span class="dot"></span><span id="env-text">sandbox</span></span></h2>
+      <div id="cards">
+      <div class="card" data-card="connection">
+        <div class="card-hd">
+          <button class="card-grip" draggable="true" title="Drag to reorder"
+            aria-label="Drag to reorder">⠿</button>
+          <h2><button class="card-toggle" aria-expanded="true"><span
+                class="card-chevron" aria-hidden="true">▾</span>eBay connection <span id="env-chip" class="chip"><span class="dot"></span><span id="env-text">sandbox</span></span></button></h2>
+          <span class="spacer"></span>
+          <span class="card-ctl">
+            <button class="card-up" title="Move up" aria-label="Move up">↑</button>
+            <button class="card-down" title="Move down" aria-label="Move down">↓</button>
+          </span>
+        </div>
+        <div class="card-body">
         <div class="row">
           <div>
             <label for="environment">Environment</label>
@@ -382,10 +556,22 @@
           <button id="disconnect" class="danger">Disconnect</button>
         </div>
         <div id="conn-msg" class="msg"></div>
+        </div>
       </div>
 
-      <div class="card">
-        <h2>Listing defaults &amp; automatic listing</h2>
+      <div class="card" data-card="defaults">
+        <div class="card-hd">
+          <button class="card-grip" draggable="true" title="Drag to reorder"
+            aria-label="Drag to reorder">⠿</button>
+          <h2><button class="card-toggle" aria-expanded="true"><span
+                class="card-chevron" aria-hidden="true">▾</span>Listing defaults &amp; automatic listing</button></h2>
+          <span class="spacer"></span>
+          <span class="card-ctl">
+            <button class="card-up" title="Move up" aria-label="Move up">↑</button>
+            <button class="card-down" title="Move down" aria-label="Move down">↓</button>
+          </span>
+        </div>
+        <div class="card-body">
         <div class="row">
           <div>
             <label for="postalCode">Ship-from ZIP (required to list)</label>
@@ -435,10 +621,22 @@
           <button id="run-pass">Run auto-list pass now</button>
         </div>
         <div id="settings-msg" class="msg"></div>
+        </div>
       </div>
 
-      <div class="card">
-        <h2>List a sample now</h2>
+      <div class="card" data-card="list-now">
+        <div class="card-hd">
+          <button class="card-grip" draggable="true" title="Drag to reorder"
+            aria-label="Drag to reorder">⠿</button>
+          <h2><button class="card-toggle" aria-expanded="true"><span
+                class="card-chevron" aria-hidden="true">▾</span>List a sample now</button></h2>
+          <span class="spacer"></span>
+          <span class="card-ctl">
+            <button class="card-up" title="Move up" aria-label="Move up">↑</button>
+            <button class="card-down" title="Move down" aria-label="Move down">↓</button>
+          </span>
+        </div>
+        <div class="card-body">
         <div class="row">
           <div>
             <label for="list-ref">Sample ID or TikTok product ID</label>
@@ -454,15 +652,40 @@
             <input id="list-creator" placeholder="@handle" />
           </div>
         </div>
+        <button id="fx-chip" class="fx-chip" hidden
+          title="Show how the suggested Ask price was computed">ƒx suggested
+          <span id="fx-chip-price"></span></button>
+        <div id="fx-panel" class="formula" hidden>
+          <div class="fx-head">
+            <span>Suggested ask <b id="fx-price">$—</b>
+              <span class="muted" id="fx-for"></span></span>
+            <span class="spacer"></span>
+            <button id="fx-min" class="fx-mini" title="Minimize to icon">–</button>
+          </div>
+          <div class="fx-steps" id="fx-steps"></div>
+          <div class="muted fx-note" id="fx-note"></div>
+        </div>
         <div class="btns">
           <button id="list-now" class="primary">List on eBay</button>
         </div>
         <div id="list-msg" class="msg"></div>
+        </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-card="listings">
+        <div class="card-hd">
+          <button class="card-grip" draggable="true" title="Drag to reorder"
+            aria-label="Drag to reorder">⠿</button>
+          <h2><button class="card-toggle" aria-expanded="true"><span
+                class="card-chevron" aria-hidden="true">▾</span>Listings</button></h2>
+          <span class="spacer"></span>
+          <span class="card-ctl">
+            <button class="card-up" title="Move up" aria-label="Move up">↑</button>
+            <button class="card-down" title="Move down" aria-label="Move down">↓</button>
+          </span>
+        </div>
+        <div class="card-body">
         <div class="tbl-top">
-          <h2 style="margin:0">Listings</h2>
           <span class="spacer"></span>
           <select id="filter-status">
             <option value="">All statuses</option>
@@ -490,6 +713,8 @@
             </tr>
           </tbody>
         </table>
+        </div>
+      </div>
       </div>
     </div>
 
@@ -767,6 +992,214 @@
       }
     });
 
+    /* ---- Ask-price suggestion (eBay pricing formula) ------------------ */
+    // As soon as a sample/product ref is typed (or scanned), run it through
+    // POST /api/ebay-price (packages/marketplace/ebay-pricing.ts — the same
+    // formula behind /demos/ebay-pricing) and suggest the Ask price. The
+    // formula walk shows briefly, then minimizes to the ƒx chip.
+    const FX_MINIMIZE_MS = 7000;
+    let fxTimer = null;
+    let fxMinTimer = null;
+    let fxSeq = 0;
+    let lastSuggested = ""; // only overwrite a price WE filled in
+
+    // Un-fill OUR previous suggestion (never a hand-typed price). Without
+    // this, sample A's suggested price would linger in the field and be
+    // submitted as the explicit ask for sample B — the server treats any
+    // explicit askPrice as authoritative over B's own best/current price.
+    function fxClearSuggested() {
+      const priceEl = $("list-price");
+      if (lastSuggested && priceEl.value.trim() === lastSuggested) {
+        priceEl.value = "";
+      }
+      lastSuggested = "";
+    }
+    function fxHide() {
+      clearTimeout(fxMinTimer);
+      $("fx-panel").hidden = true;
+      $("fx-chip").hidden = true;
+      fxClearSuggested();
+    }
+    function fxShowPanel() {
+      clearTimeout(fxMinTimer);
+      $("fx-panel").hidden = false;
+      $("fx-chip").hidden = true;
+    }
+    function fxMinimize() {
+      clearTimeout(fxMinTimer);
+      $("fx-panel").hidden = true;
+      $("fx-chip").hidden = false;
+    }
+    $("fx-min").addEventListener("click", fxMinimize);
+    $("fx-chip").addEventListener("click", fxShowPanel);
+
+    $("list-ref").addEventListener("input", () => {
+      // The ref changed: any previous suggestion no longer applies. Drop it
+      // immediately (not after the debounce) so a fast scan→click can't
+      // submit the previous sample's price.
+      fxClearSuggested();
+      clearTimeout(fxTimer);
+      fxTimer = setTimeout(suggestAskPrice, 500);
+    });
+
+    // Same resolution rule the server uses: 18-19 digits = TikTok product ID
+    // (qr_code), anything else = sample row ID. Unsold rows only — the
+    // listing service refuses sold stock, so suggesting a price for it would
+    // only mislead.
+    async function findSample(ref) {
+      const query = /^\d{18,19}$/.test(ref)
+        ? `qr_code=${encodeURIComponent(ref)}&order_by=-created_at&limit=25`
+        : `id=${encodeURIComponent(ref)}&limit=1`;
+      const res = await api(`/api/samples?${query}`);
+      if (res.status !== 200 || !Array.isArray(res.body) || !res.body.length) {
+        return null;
+      }
+      return res.body.find((r) => String(r.status || "") !== "sold") || null;
+    }
+
+    async function suggestAskPrice() {
+      const ref = $("list-ref").value.trim();
+      const seq = ++fxSeq;
+      if (!ref) {
+        fxHide();
+        return;
+      }
+      try {
+        const row = await findSample(ref);
+        if (seq !== fxSeq) return; // superseded by newer input
+        if (!row) {
+          fxHide();
+          return;
+        }
+        const retail = Number(row.current_price);
+        const created = row.created_date || row.created_at;
+        const createdMs = created ? new Date(created).getTime() : NaN;
+        const daysListed = Number.isFinite(createdMs)
+          ? Math.max(0, Math.floor((Date.now() - createdMs) / 86400000))
+          : 0;
+        const condSetting = String(
+          (account && account.settings && account.settings.condition) || "NEW",
+        );
+        const input = {
+          retail: retail > 0 ? retail : undefined,
+          costBasis: 0,
+          comps: [],
+          condition: condSetting.startsWith("USED") ? "used" : "new",
+          daysListed,
+        };
+        const res = await api("/api/ebay-price", {
+          method: "POST",
+          body: JSON.stringify(input),
+        });
+        if (seq !== fxSeq) return;
+        const r = res.body;
+        if (res.status !== 200 || !r || typeof r.price !== "number") {
+          fxHide();
+          return;
+        }
+        renderSuggestion(row, r, input);
+      } catch {
+        if (seq === fxSeq) fxHide();
+      }
+    }
+
+    function fxFormulaSteps(r, input) {
+      const steps = [];
+      // Mirror the engine's order: the used haircut applies to the ANCHOR
+      // (STEP 3) before the undercut is computed from it (STEP 4).
+      const usedStep = input.condition === "used" && r.anchorSource !== "floor"
+        ? "× 0.85 used"
+        : null;
+      if (r.anchorSource === "comp") {
+        steps.push(`anchor $${Number(r.anchor).toFixed(2)} (cheapest credible comp)`);
+        if (usedStep) steps.push(usedStep);
+        steps.push(
+          r.lowConfidence
+            ? "− max(3%, $0.50) gentle undercut"
+            : "− max(5%, $1) undercut",
+        );
+      } else if (r.anchorSource === "retail") {
+        const retail = Number(input.retail);
+        const pct = retail > 0 ? Math.round((Number(r.anchor) / retail) * 100) : 30;
+        steps.push(
+          `anchor $${Number(r.anchor).toFixed(2)} = retail $${
+            retail.toFixed(2)
+          } × ${pct}% resale band`,
+        );
+        if (usedStep) steps.push(usedStep);
+      } else {
+        steps.push("no comps or retail — fee-aware floor drives the price");
+      }
+      if (r.ageFactor < 1) {
+        steps.push(`× ${Number(r.ageFactor).toFixed(2)} (in stock ${r.daysListed}d)`);
+      }
+      steps.push(
+        `clamp [$${Number(r.floor).toFixed(2)} … $${Number(r.ceiling).toFixed(2)}]`,
+      );
+      // Floor-bound prices are deliberately NOT charm-rounded (engine STEP 8).
+      const price = `$${Number(r.price).toFixed(2)}`;
+      steps.push(
+        Math.round(Number(r.price) * 100) % 100 === 99
+          ? `charm .99 → ${price}`
+          : `→ ${price}${r.floorHit ? " (exact floor)" : ""}`,
+      );
+      return steps;
+    }
+
+    function renderSuggestion(row, r, input) {
+      const price = Number(r.price).toFixed(2);
+      const floor = Number(r.floor).toFixed(2);
+      const best = Number(row.best_price);
+      const name = String(row.name || `sample ${row.id}`);
+      const shortName = name.length > 64
+        ? name.slice(0, 63).trimEnd() + "…"
+        : name;
+      // Only a market-anchored result is a real suggestion. Floor-driven means
+      // NO market data (no retail on file) — the $3.80-style constant must not
+      // be auto-filled: blank keeps the server's best/current-price fallback
+      // (and its "price required" guard) intact.
+      const hasMarket = r.anchorSource !== "floor";
+      if (hasMarket) {
+        // Fill the Ask price only when it's empty or still holds OUR previous
+        // suggestion — a hand-typed price always wins.
+        const typed = $("list-price").value.trim();
+        if (!typed || typed === lastSuggested) {
+          $("list-price").value = price;
+          lastSuggested = price;
+        }
+        $("fx-price").textContent = `$${price}`;
+        $("fx-chip-price").textContent = `$${price}`;
+        $("fx-for").textContent = `— ${shortName} · nets $${
+          Number(r.netAtPrice).toFixed(2)
+        } after fees`;
+      } else {
+        fxClearSuggested();
+        $("fx-price").textContent = `$${floor} floor`;
+        $("fx-chip-price").textContent = `floor $${floor}`;
+        $("fx-for").textContent = `— ${shortName} · no retail price on file`;
+      }
+      $("fx-steps").innerHTML = fxFormulaSteps(r, input)
+        .map((s) => `<span class="fx-step">${esc(s)}</span>`)
+        .join('<span class="fx-arr">→</span>');
+      const pid = String(row.qr_code || "").trim();
+      const demoLink = `<a href="/demos/ebay-pricing${
+        pid ? `?product=${encodeURIComponent(pid)}` : ""
+      }" target="_blank" rel="noopener noreferrer">open the pricing demo</a>`;
+      $("fx-note").innerHTML = hasMarket
+        ? (best > 0
+          ? `Sample has best_price $${best.toFixed(2)} on file. `
+          : "") +
+          `Edit the price to override · ${demoLink} to add real comps.`
+        : (best > 0
+          ? `Leave blank to list at the sample's best_price $${
+            best.toFixed(2)
+          } — never below the $${floor} floor. `
+          : `No sale price on file — enter an ask at/above the $${floor} fee floor. `) +
+          `${demoLink} to add real comps.`;
+      fxShowPanel();
+      fxMinTimer = setTimeout(fxMinimize, FX_MINIMIZE_MS);
+    }
+
     function notifyShell(message) {
       // Same-origin shell window relays a refresh into Inventory panes and
       // shows a taskbar toast ({source:"lp-os-marketplace"} handler, os.js).
@@ -872,6 +1305,146 @@
       );
     });
 
+    /* ---- collapsible / re-orderable cards ------------------------------ */
+    // Click a card header to collapse/expand; reorder with the ↑/↓ arrows or
+    // by dragging the ⠿ grip. Order + collapsed state persist per browser.
+    const LAYOUT_KEY = "lpos-marketplace-cards";
+    const cardsBox = $("cards");
+    const cardEls = () =>
+      [...cardsBox.children].filter((el) => el.classList.contains("card"));
+
+    function syncCards() {
+      const cards = cardEls();
+      cards.forEach((card, i) => {
+        card.querySelector(".card-up").disabled = i === 0;
+        card.querySelector(".card-down").disabled = i === cards.length - 1;
+        card.querySelector(".card-toggle").setAttribute(
+          "aria-expanded",
+          String(!card.classList.contains("collapsed")),
+        );
+      });
+    }
+
+    function saveLayout() {
+      try {
+        localStorage.setItem(
+          LAYOUT_KEY,
+          JSON.stringify({
+            order: cardEls().map((c) => c.dataset.card),
+            collapsed: cardEls()
+              .filter((c) => c.classList.contains("collapsed"))
+              .map((c) => c.dataset.card),
+          }),
+        );
+      } catch { /* storage unavailable — layout just won't persist */ }
+    }
+
+    function applyLayout() {
+      let saved = null;
+      try {
+        saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) || "null");
+      } catch { /* corrupted state — fall back to the default layout */ }
+      if (saved) {
+        const byId = new Map(cardEls().map((c) => [c.dataset.card, c]));
+        for (const id of Array.isArray(saved.order) ? saved.order : []) {
+          const card = byId.get(id);
+          if (card) cardsBox.appendChild(card); // re-append in saved order
+        }
+        for (
+          const id of Array.isArray(saved.collapsed) ? saved.collapsed : []
+        ) {
+          const card = byId.get(id);
+          if (card) card.classList.add("collapsed");
+        }
+      }
+      syncCards();
+    }
+
+    function toggleCard(card) {
+      card.classList.toggle("collapsed");
+      syncCards();
+      saveLayout();
+    }
+
+    function moveCard(card, dir) {
+      const sib = dir < 0
+        ? card.previousElementSibling
+        : card.nextElementSibling;
+      if (!sib || !sib.classList.contains("card")) return;
+      if (dir < 0) cardsBox.insertBefore(card, sib);
+      else cardsBox.insertBefore(sib, card);
+      syncCards();
+      saveLayout();
+    }
+
+    cardsBox.addEventListener("click", (e) => {
+      const card = e.target.closest(".card");
+      if (!card) return;
+      if (e.target.closest(".card-up")) return moveCard(card, -1);
+      if (e.target.closest(".card-down")) return moveCard(card, 1);
+      if (e.target.closest(".card-hd") && !e.target.closest(".card-grip")) {
+        toggleCard(card);
+      }
+    });
+    // Keyboard: the .card-toggle is a real <button>, so Enter/Space fire the
+    // click handler above natively.
+
+    // Drag reorder (the ⠿ grip is the only draggable element).
+    let draggedCard = null;
+    function clearDropMarks() {
+      for (const c of cardEls()) {
+        c.classList.remove("drag-over-top", "drag-over-bottom");
+      }
+    }
+    function endDrag() {
+      clearDropMarks();
+      if (draggedCard) draggedCard.classList.remove("dragging");
+      draggedCard = null;
+    }
+    cardsBox.addEventListener("dragstart", (e) => {
+      const grip = e.target.closest && e.target.closest(".card-grip");
+      if (!grip) return e.preventDefault();
+      draggedCard = grip.closest(".card");
+      draggedCard.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try {
+        e.dataTransfer.setData("text/plain", draggedCard.dataset.card);
+        e.dataTransfer.setDragImage(draggedCard, 24, 16);
+      } catch { /* older engines — default drag image */ }
+    });
+    cardsBox.addEventListener("dragover", (e) => {
+      if (!draggedCard) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      clearDropMarks();
+      const over = e.target.closest(".card");
+      if (!over || over === draggedCard) return;
+      const rect = over.getBoundingClientRect();
+      over.classList.add(
+        e.clientY < rect.top + rect.height / 2
+          ? "drag-over-top"
+          : "drag-over-bottom",
+      );
+    });
+    cardsBox.addEventListener("drop", (e) => {
+      if (!draggedCard) return;
+      e.preventDefault();
+      const over = e.target.closest(".card");
+      if (over && over !== draggedCard) {
+        const rect = over.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        cardsBox.insertBefore(
+          draggedCard,
+          before ? over : over.nextElementSibling,
+        );
+        syncCards();
+        saveLayout();
+      }
+      endDrag();
+    });
+    cardsBox.addEventListener("dragend", endDrag);
+
+    applyLayout();
     loadAccount();
     loadListings();
     setInterval(loadListings, 15000); // pick up auto-lister results
