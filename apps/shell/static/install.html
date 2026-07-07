@@ -6,35 +6,123 @@
     <meta name="color-scheme" content="dark" />
     <title>Install · LP-OS scraper extension</title>
     <style>
-      :root { --bg:#0b0d11; --panel:#14181f; --line:#2a313d; --text:#f5f7f9; --muted:#8b95a4; --accent:#e8650a; --accent-soft:rgba(232,101,10,.16); }
-      * { box-sizing: border-box; }
-      body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
-      .wrap { max-width:560px; margin:0 auto; padding:22px 18px 44px; }
-      .hd { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
-      .logo { width:40px; height:40px; border-radius:12px; flex-shrink:0; display:grid; place-items:center; background:linear-gradient(150deg,#ed8740,var(--accent)); box-shadow:0 6px 18px rgba(232,101,10,.35); font-weight:700; color:#06130d; }
-      h1 { margin:0; font-size:19px; }
-      .sub { color:var(--muted); font-size:13px; margin:2px 0 18px; }
-      .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
-      ol { margin:6px 0 0; padding-left:20px; line-height:1.85; font-size:14px; }
-      code { background:#0d1016; border:1px solid var(--line); border-radius:6px; padding:2px 7px; font-size:12.5px; }
-      .note { color:var(--accent); font-size:12.5px; background:var(--accent-soft); border:1px solid rgba(232,101,10,.3); border-radius:8px; padding:9px 11px; margin-top:12px; }
-      .warn { color:#ffb4a2; font-size:12.5px; background:rgba(220,80,60,.12); border:1px solid rgba(220,80,60,.35); border-radius:8px; padding:9px 11px; margin-top:12px; }
-      .muted { color:var(--muted); font-size:12.5px; }
-      h2 { font-size:14px; margin:0 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; }
+    :root {
+      --bg: #0b0d11;
+      --panel: #14181f;
+      --line: #2a313d;
+      --text: #f5f7f9;
+      --muted: #8b95a4;
+      --accent: #e8650a;
+      --accent-soft: rgba(232,101,10,.16);
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 22px 18px 44px;
+    }
+    .hd {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(150deg,#ed8740,var(--accent));
+      box-shadow: 0 6px 18px rgba(232,101,10,.35);
+      font-weight: 700;
+      color: #06130d;
+    }
+    h1 {
+      margin: 0;
+      font-size: 19px;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 2px 0 18px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    ol {
+      margin: 6px 0 0;
+      padding-left: 20px;
+      line-height: 1.85;
+      font-size: 14px;
+    }
+    code {
+      background: #0d1016;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 12.5px;
+    }
+    .note {
+      color: var(--accent);
+      font-size: 12.5px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(232,101,10,.3);
+      border-radius: 8px;
+      padding: 9px 11px;
+      margin-top: 12px;
+    }
+    .warn {
+      color: #ffb4a2;
+      font-size: 12.5px;
+      background: rgba(220,80,60,.12);
+      border: 1px solid rgba(220,80,60,.35);
+      border-radius: 8px;
+      padding: 9px 11px;
+      margin-top: 12px;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    h2 {
+      font-size: 14px;
+      margin: 0 0 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
     </style>
   </head>
   <body>
     <div class="wrap">
       <div class="hd">
         <div class="logo">LP</div>
-        <div><h1>Install the LP-OS scraper extension</h1></div>
+        <div>
+          <h1>Install the LP-OS scraper extension</h1>
+        </div>
       </div>
-      <p class="sub">The merged Chrome extension scrapes TikTok Shop seller/order pages (order list, product analytics, LIVE, Partner Center) into LP-OS's own message store via <code>POST /gelf</code>, with behaviors role-gated by the LP-OS shell user.</p>
+      <p
+        class="sub">The merged Chrome extension scrapes TikTok Shop seller/order pages (order list, product analytics, LIVE, Partner Center) into LP-OS's own message store via <code>POST /gelf</code>, with behaviors role-gated by the LP-OS shell user.</p>
 
       <div class="card">
-        <h2>1 · Get the extension folder</h2>
-        <p style="font-size:14px;margin:0">The merged extension lives in this repo at <code>extension/</code> (a checkout of <code>lp-os</code>). No zip is published yet — use that folder directly with Load&nbsp;unpacked below.</p>
-        <p class="warn">Do <b>not</b> install the legacy <code>easierbycode.com/tok-scrape/chrome.zip</code> — that is the OLD tok-scrape extension: it posts scrapes to the retired graylog-shim (they never reach LP-OS) and has no role gate.</p>
+        <h2>1 · Get the extension</h2>
+        <p
+          style="font-size:14px;margin:0"><a href="/extension.zip" download="lp-os-extension.zip"><b>Download lp-os-extension.zip</b></a> and unzip it (it contains a single <code>lp-os-extension/</code> folder). Working from a checkout of <code>lp-os</code>? The same files live at <code>extension/</code> — use that folder directly instead.</p>
       </div>
 
       <div class="card">
@@ -42,13 +130,15 @@
         <ol>
           <li>Open <code>chrome://extensions</code> (paste it into the address bar — pages can't link to <code>chrome://</code>).</li>
           <li>Turn on <b>Developer mode</b> (top-right).</li>
-          <li>Click <b>Load unpacked</b> and pick the repo's <code>extension/</code> folder.</li>
+          <li>Click <b>Load unpacked</b> and pick the unzipped <code>lp-os-extension/</code> folder (or the repo's <code>extension/</code>).</li>
           <li>Open a TikTok Shop seller/order page — the scrape button appears (role-gated).</li>
         </ol>
-        <p class="note">Chrome blocks <code>.crx</code> installs from outside the Web Store for normal profiles, so the supported path is <b>Load unpacked</b> (no <code>.crx</code> is published). Enterprise force-install is the only exception.</p>
+        <p
+          class="note">Chrome blocks <code>.crx</code> installs from outside the Web Store for normal profiles, so the supported path is <b>Load unpacked</b> (no <code>.crx</code> is published). Enterprise force-install is the only exception.</p>
       </div>
 
-      <p class="muted">No extension? You can still run Samples-Import directly via the Claude browser skill (the <code>samples-import</code> skill) — it opens the page and drives it without the extension.</p>
+      <p
+        class="muted">No extension? You can still run Samples-Import directly via the Claude browser skill (the <code>samples-import</code> skill) — it opens the page and drives it without the extension.</p>
     </div>
   </body>
 </html>

@@ -4,7 +4,10 @@
 // freshness layer: every same-origin GET goes network-first.
 //
 // Bump SW_VERSION to drop all previously cached copies on the next deploy.
-const SW_VERSION = "v1";
+// v2: first thirsty.store deploy (LP-OS replacing data-pimp).
+// v3: /member (SvelteKit member app) served same-origin — its SW owns scope
+//     /member/; the shell SW must never answer for member URLs.
+const SW_VERSION = "v3";
 const CACHE_NAME = `lpos-shell-${SW_VERSION}`;
 
 const PRECACHE = [
@@ -18,8 +21,9 @@ const PRECACHE = [
 ];
 
 // Live surfaces the SW must never answer for: inventory/lifecycle APIs, the
-// scan-socket upgrade, GELF ingest, graylog search, health.
-const NETWORK_ONLY = [/^\/api\//, /^\/gelf$/, /^\/health$/];
+// scan-socket upgrade, GELF ingest, graylog search, health, and the member
+// app (its own SW owns scope /member/, but that scope excludes bare /member).
+const NETWORK_ONLY = [/^\/api\//, /^\/gelf$/, /^\/health$/, /^\/member(\/|$)/];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

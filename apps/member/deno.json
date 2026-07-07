@@ -6,6 +6,10 @@
     "check": "deno run -A npm:@sveltejs/kit/svelte-kit sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json",
     "desktop": "deno desktop -A --no-check --node-modules-dir=none --no-lock"
   },
+  "deploy": {
+    "org": "easierbycode",
+    "app": "lp-os-member"
+  },
   "desktop": {
     "app": {
       "name": "LP-OS Member",
@@ -24,14 +28,14 @@
     }
   },
   "imports": {
-    "@deno/svelte-adapter": "npm:@deno/svelte-adapter@^0.2.1",
-    "@deno/svelte-adapter/": "npm:/@deno/svelte-adapter@^0.2.1/",
-    "@sveltejs/kit": "npm:@sveltejs/kit@^2.69.1",
-    "@sveltejs/kit/": "npm:/@sveltejs/kit@^2.69.1/",
-    "clsx": "npm:clsx@^2.1.1",
-    "cookie": "npm:cookie@^0.6.0",
-    "devalue": "npm:devalue@^5.8.1",
-    "set-cookie-parser": "npm:set-cookie-parser@^3.1.1",
+    "@deno/svelte-adapter": "npm:@deno/svelte-adapter@0.2.1",
+    "@deno/svelte-adapter/": "npm:/@deno/svelte-adapter@0.2.1/",
+    "@sveltejs/kit": "npm:@sveltejs/kit@2.69.1",
+    "@sveltejs/kit/": "npm:/@sveltejs/kit@2.69.1/",
+    "clsx": "npm:clsx@2.1.1",
+    "cookie": "npm:cookie@0.6.0",
+    "devalue": "npm:devalue@5.8.1",
+    "set-cookie-parser": "npm:set-cookie-parser@3.1.1",
     "events": "node:events",
     "fs/promises": "node:fs/promises",
     "util": "node:util",

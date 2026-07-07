@@ -25,15 +25,14 @@ which calls the lifecycle endpoints (`/api/sample-status`, `/api/sample-sold`,
 `/api/sample-assign`, `/api/sample-import` — served in LP-OS by `apps/shell`
 via `@lp-os/lifecycle`).
 
-> **MCP configuration — required before writing.** The thirsty-samples MCP
-> server has NOT been ported into this repo; it still lives in data-pimp
+> **MCP configuration.** The thirsty-samples MCP server has NOT been ported
+> into this repo; it still lives in data-pimp
 > (`mcp/thirsty-samples/server.ts`) and reads its API base from
 > **`THIRSTY_API_URL`** (or `THIRSTY_API`), defaulting to
-> `https://thirsty.store` — the OLD production deployment. It does **not**
-> read `LPOS_API_URL`. To make these tools write to LP-OS, set
-> `THIRSTY_API_URL` to the LP-OS base (e.g. `http://localhost:8000`) in the
-> MCP server's env before use — otherwise every write silently lands in the
-> pre-migration system and LP-OS's Postgres/Graylog never see it.
+> `https://thirsty.store` — which LP-OS now serves (it replaced data-pimp
+> behind that domain at the 2026-07 changeover), so the default writes to
+> production LP-OS. It does **not** read `LPOS_API_URL`; set
+> `THIRSTY_API_URL=http://localhost:8000` to target a local shell instead.
 
 Every action writes to **two** places:
 
@@ -222,10 +221,10 @@ Full field/query reference:
   `graylog:false`); always reflect what actually persisted.
 - **Confirm the creator.** Don't attribute revenue to an unconfirmed handle.
 - **Writes are real.** The endpoints are open (no auth, by design). LP-OS's
-  API base is `http://localhost:8000` in dev (production domain TBD) — but the
-  thirsty-samples MCP targets whatever **`THIRSTY_API_URL`** points at
-  (default `https://thirsty.store`, the OLD deployment; see the configuration
-  note at the top). Verify it targets the intended system before writing.
+  API base is `http://localhost:8000` in dev and `https://thirsty.store` in
+  production (LP-OS now owns that domain) — the thirsty-samples MCP's
+  **`THIRSTY_API_URL`** default of `https://thirsty.store` therefore lands in
+  LP-OS. Verify it targets the intended system before writing.
   Treat status/sold writes as real inventory changes; confirm ambiguous
   targets before writing.
 - **Join key is `product_id` = `qr_code`.** A `qr_code` holding a barcode (not a

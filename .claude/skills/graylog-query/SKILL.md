@@ -31,7 +31,7 @@ The tool is `scripts/graylog_query.ts` (Deno). It has two modes:
   mini-Lucene grammar into parameterized SQL. No server needed.
 - **`--url` mode:** hits any Graylog-compatible REST endpoint
   (`GET /api/search/universal/relative`) — LP-OS itself (`http://localhost:8000`
-  by default; production domain TBD), the legacy Deno-KV shim
+  by default; production `https://thirsty.store`), the legacy Deno-KV shim
   (`https://graylog-shim.easierbycode.deno.net`), or a real Graylog — with the
   same Basic-auth conventions as the old python script.
 
@@ -90,7 +90,7 @@ root — the `@lp-os/graylog` import resolves via the Deno workspace.
 **`--url` mode** targets any Graylog-compatible REST endpoint:
 
 - LP-OS itself: `--url http://localhost:8000` (or wherever `LPOS_API_URL`
-  points; production domain TBD). No auth required.
+  points; production `https://thirsty.store`). No auth required.
 - The legacy Deno-KV shim: `--url https://graylog-shim.easierbycode.deno.net`
   (still holds the pre-migration corpus until the backfill runs). Needs a token.
 - If `DATABASE_URL` is unset but `GRAYLOG_API_URL` is set, URL mode is used
