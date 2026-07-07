@@ -458,6 +458,19 @@ const FOLDERS = [
         height: 760,
       },
       {
+        id: "ebay-pricing",
+        name: "eBay Pricing",
+        icon: ICONS.valuation,
+        // Interactive eBay pricing-formula demo (undercut → velocity markdown
+        // → fee-aware floor) over the live catalog, served same-origin by the
+        // shell. The Marketplace window's Ask-price suggestion deep-links here
+        // with ?product=<id>.
+        url: "/demos/ebay-pricing",
+        allow: "fullscreen",
+        width: 1180,
+        height: 800,
+      },
+      {
         id: "content-by-sample",
         name: "Content by Sample",
         icon: ICONS.content,

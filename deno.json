@@ -29,6 +29,7 @@
     "desktop:shell:raw": "deno task --cwd apps/shell desktop:raw",
     "desktop:shell:cef": "deno task --cwd apps/shell desktop:cef",
     "desktop:member": "deno task --cwd apps/member desktop",
+    "demo:ebay-pricing": "deno run -A scripts/ebay-pricing-demo.ts",
     "gen:icons": "deno run -A scripts/gen-icons.ts",
     "migrate": "deno run -A packages/db/scripts/migrate.ts",
     "backfill:graylog": "deno run -A packages/graylog/scripts/backfill.ts"

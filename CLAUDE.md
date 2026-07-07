@@ -46,6 +46,8 @@ follows.
 - `deno task check` — typecheck the Deno workspace.
 - `deno task test` — package tests.
 - `deno task migrate` — apply SQL migrations.
+- `deno task demo:ebay-pricing` — CLI eBay pricing-formula demo (visual twin:
+  `/demos/ebay-pricing`).
 - `deno task desktop:shell` / `deno task desktop:member` — native desktop
   bundles into `dist/` (needs Deno 2.9+; see `docs/DISTRIBUTION.md`).
 - `deno task gen:icons` — regenerate both apps' PWA/desktop icon sets.

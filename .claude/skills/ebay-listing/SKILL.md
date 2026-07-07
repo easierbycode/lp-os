@@ -119,9 +119,11 @@ Guidance:
   — the returned `price` sits at the floor; don't hand-edit it lower.
 - **Relay the reasoning.** Tell the user what the `explanation` says (e.g.
   "undercuts the cheapest comp $58 → $54.99, nets $47.40 after fees").
-- Try it yourself: the visual demo at `https://thirsty.store/demos/ebay-pricing`
-  (data-pimp; LP-OS ships neither the demo page nor a `demo:ebay-pricing` task
-  yet).
+- Try it yourself: `deno task demo:ebay-pricing` (CLI), or the visual demo at
+  `/demos/ebay-pricing` (Demos → eBay Pricing in the shell) — pick a catalog
+  product from the dropdown, or deep-link `?product=<productId>`. The
+  Marketplace window's "List a sample now" runs the same formula to suggest the
+  Ask price.
 
 ## Guardrails
 

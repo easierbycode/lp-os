@@ -422,6 +422,14 @@ app.get("/e2e", async (ctx) => {
   return res ?? json({ error: "e2e page missing" }, 500);
 });
 
+// Interactive eBay pricing-formula demo (Demos → eBay Pricing), product-first
+// over the live catalog. Data-pimp served this at the same path; kept so old
+// links keep working. Backed by /api/products + /api/ebay-price below.
+app.get("/demos/ebay-pricing", async (ctx) => {
+  const res = await serveStatic("/ebay-pricing.html", ctx.req.method);
+  return res ?? json({ error: "ebay-pricing page missing" }, 500);
+});
+
 // /extension.zip — the merged Chrome extension zipped for the /install page's
 // download. The static middleware serves the prebuilt static/extension.zip
 // when the build task has run; this fallback zips the repo's extension/

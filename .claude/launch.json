@@ -5,7 +5,8 @@
       "name": "shell",
       "runtimeExecutable": "deno",
       "runtimeArgs": ["task", "dev"],
-      "port": 8000
+      "port": 8000,
+      "autoPort": true
     },
     {
       "name": "member",
