@@ -1,9 +1,9 @@
-/* LP-OS Kiosk — LifePreneur "Inventory Manager".
+/* LP-OS Kiosk â€” LifePreneur "Inventory Manager".
    Vanilla port of the deployed React kiosk's look: the dark shadcn token
    palette below is copied verbatim from data-pimp renderSPAShell (which in
    turn ported tiktok-sample-tracker src/index.css), and the component classes
    reproduce the Tailwind utility combinations the bundle used. No CDN, no
-   webfont — system Inter-alike stack, works offline/desktop-compiled. */
+   webfont â€” system Inter-alike stack, works offline/desktop-compiled. */
 
 :root {
   color-scheme: dark;
@@ -786,33 +786,33 @@ p {
 
 .samples-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
 .bundles-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
 @media (min-width: 640px) {
   .samples-grid,
   .bundles-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
   .samples-grid,
   .bundles-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1280px) {
   .samples-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -903,14 +903,14 @@ p {
 
 .details-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   padding-block: 2rem;
 }
 
 @media (min-width: 1024px) {
   .details-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .details-main {
@@ -1194,13 +1194,13 @@ p {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
 @media (min-width: 768px) {
   .form-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .form-field.span-2 {
