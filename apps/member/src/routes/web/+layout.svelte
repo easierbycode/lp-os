@@ -33,7 +33,7 @@
 <div class="web-shell">
 	<aside class="sidebar">
 		<a href="{base}/web" class="brand">
-			<img src="{base}/logo.svg" alt="" />
+			<img src="{base}/lp-logo.png" alt="" />
 			<span>LifePreneur</span>
 		</a>
 
