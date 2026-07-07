@@ -265,6 +265,12 @@ const MEMBER_APP_URL = baseAppUrl(
   OS_CONFIG.memberAppUrl,
   "http://localhost:8080",
 );
+// Member/Web is its own deployment (data-pimp member dashboard), not a route
+// of MEMBER_APP_URL — the two windows point at independent apps.
+const MEMBER_WEB_URL = baseAppUrl(
+  OS_CONFIG.memberWebUrl,
+  "https://data-pimp.easierbycode.deno.net/member",
+);
 const INVENTORY_APP_URL = baseAppUrl(
   OS_CONFIG.inventoryAppUrl,
   "https://admin.thirsty.store",
@@ -493,9 +499,9 @@ const FOLDERS = [
         id: "member-web",
         name: "Web",
         icon: ICONS.browser,
-        // The member app's web/landing view (seller/streamer/content
-        // dashboards) — the /web route of the same SvelteKit app.
-        url: MEMBER_APP_URL + "/web",
+        // The member web dashboard (seller/streamer/content dashboards) —
+        // a separate deployment from Member/App (MEMBER_WEB_URL).
+        url: MEMBER_WEB_URL,
         allow: "fullscreen",
         external: true,
         width: 1180,

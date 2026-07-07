@@ -200,6 +200,8 @@ function osClientConfig(): Record<string, string> {
     scanRelay: "",
     memberAppUrl: publicHttpBaseUrl(envValue("MEMBER_APP_URL")) ||
       "http://localhost:8080",
+    memberWebUrl: publicHttpBaseUrl(envValue("MEMBER_WEB_URL")) ||
+      "https://data-pimp.easierbycode.deno.net/member",
     scannerAppUrl: publicHttpBaseUrl(envValue("SCANNER_APP_URL")),
     inventoryAppUrl: publicHttpBaseUrl(envValue("INVENTORY_APP_URL")) ||
       "https://admin.thirsty.store",
