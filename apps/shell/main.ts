@@ -8,6 +8,7 @@
 // assets, relay/kiosk endpoints and stubs keep working; DB-backed APIs return
 // 503 {error: "DATABASE_URL not configured"} instead of crashing.
 
+import "./core/fresh-no-build.ts"; // before "fresh": hides DENO_DEPLOYMENT_ID
 import { App } from "fresh";
 import { fromFileUrl } from "@std/path";
 import * as db from "@lp-os/db";
@@ -29,12 +30,22 @@ import {
 } from "@lp-os/lifecycle";
 import {
   accountConnected,
+  computeEbayPrice,
   createListingService,
+  type EbayPriceInput,
   type ListingService,
   type ListSampleInput,
+  markdownLadder,
   startAutoLister,
 } from "@lp-os/marketplace";
 import { DEFAULT_USER_ID, rbacClientConfig } from "./core/roles.ts";
+import { createProductAnalysis } from "./core/product-analysis.ts";
+import { createSampleImage } from "./core/sample-image.ts";
+import {
+  ExternalApiDisabledError,
+  externalApiEnabled,
+  externalApiStates,
+} from "./core/external-apis.ts";
 
 /* ------------------------------------------------------------------ env -- */
 
@@ -191,6 +202,16 @@ function publicHttpBaseUrl(value: string | undefined): string {
   }
 }
 
+// MEMBER_APP_URL: absolute URL (split deploy) or "/"-prefixed same-origin
+// path. Default: the mounted /member handler; standalone-dev fallback moves
+// to http://localhost:8080/member (kit.paths.base applies in dev too).
+function memberBaseValue(value: string | undefined): string {
+  const raw = (value || "").trim();
+  if (raw.startsWith("/")) return raw.replace(/\/+$/, "") || "/member";
+  return publicHttpBaseUrl(raw) ||
+    (memberHandler ? "/member" : "http://localhost:8080/member");
+}
+
 /* ------------------------------------------------------------- OS shell -- */
 
 // globalThis.LPOS_OS_CONFIG — keys read by static/os.js. scanRelay stays ""
@@ -198,8 +219,7 @@ function publicHttpBaseUrl(value: string | undefined): string {
 function osClientConfig(): Record<string, string> {
   return {
     scanRelay: "",
-    memberAppUrl: publicHttpBaseUrl(envValue("MEMBER_APP_URL")) ||
-      "http://localhost:8080",
+    memberAppUrl: memberBaseValue(envValue("MEMBER_APP_URL")),
     memberWebUrl: publicHttpBaseUrl(envValue("MEMBER_WEB_URL")) ||
       "https://data-pimp.easierbycode.deno.net/member",
     scannerAppUrl: publicHttpBaseUrl(envValue("SCANNER_APP_URL")),
@@ -308,6 +328,7 @@ const MIME_TYPES: Record<string, string> = {
   ".txt": "text/plain; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
   ".woff2": "font/woff2",
+  ".zip": "application/zip",
 };
 
 // apps/shell/static served at root paths (/os.js, /os.css, icons, ...).
@@ -394,6 +415,41 @@ app.get("/marketplace", async (ctx) => {
   return res ?? json({ error: "marketplace page missing" }, 500);
 });
 
+// One-click sample-lifecycle demo (Demos/E2E), ported from data-pimp. Same
+// pattern as /install; its APIs live in the demos/e2e section below.
+app.get("/e2e", async (ctx) => {
+  const res = await serveStatic("/e2e.html", ctx.req.method);
+  return res ?? json({ error: "e2e page missing" }, 500);
+});
+
+// /extension.zip — the merged Chrome extension zipped for the /install page's
+// download. The static middleware serves the prebuilt static/extension.zip
+// when the build task has run; this fallback zips the repo's extension/
+// folder on first request (dev servers), cached for the process lifetime.
+let extensionZipCache: Uint8Array | null = null;
+app.get("/extension.zip", async () => {
+  if (!extensionZipCache) {
+    try {
+      const { buildExtensionZip } = await import(
+        "./scripts/build-extension-zip.ts"
+      );
+      extensionZipCache = await buildExtensionZip();
+    } catch (error) {
+      return json(
+        { error: "extension zip unavailable", detail: errorMessage(error) },
+        503,
+      );
+    }
+  }
+  return new Response(extensionZipCache.slice(), {
+    headers: {
+      "content-type": "application/zip",
+      "content-disposition": 'attachment; filename="lp-os-extension.zip"',
+      "cache-control": "no-cache",
+    },
+  });
+});
+
 app.get("/scan-client.js", async () => {
   scanClientCache ??= await buildScanClient();
   if (!scanClientCache.ok) {
@@ -409,6 +465,57 @@ app.get("/scan-client.js", async () => {
     },
   });
 });
+
+/* ----------------------------------------------------------- member app -- */
+// apps/member builds (deno task --cwd apps/member build, or root build:deploy)
+// into apps/member/.deno-deploy with kit.paths.base = "/member". The adapter
+// handler is a plain Deno.ServeHandler; the built SvelteKit server strips the
+// /member base itself, so requests pass through UNSTRIPPED. Computed-URL
+// dynamic import so `deno check` never follows it and dev boots fine without
+// the build (503 on /member instead). Runtime bare specifiers
+// (@sveltejs/kit/internal/server, clsx, cookie, devalue, set-cookie-parser)
+// resolve via the ROOT deno.json import map — exact pins, keep in lockstep
+// with apps/member/package.json.
+const MEMBER_DD = new URL("../member/.deno-deploy/", import.meta.url);
+
+type MemberHandler = (
+  req: Request,
+  info: Deno.ServeHandlerInfo,
+) => Response | Promise<Response>;
+
+async function loadMemberHandler(): Promise<MemberHandler | null> {
+  try {
+    const [{ prepareServer }, deployConfig, svelteData] = await Promise.all([
+      import(new URL("handler.ts", MEMBER_DD).href),
+      Deno.readTextFile(new URL("deploy.json", MEMBER_DD)).then(JSON.parse),
+      Deno.readTextFile(new URL("svelte.json", MEMBER_DD)).then(JSON.parse),
+    ]);
+    // 3rd arg: the root deploy.json's relative ".deno-deploy/..." destinations
+    // resolve against — must be apps/member, NOT Deno.cwd().
+    return prepareServer(
+      svelteData,
+      deployConfig,
+      fromFileUrl(new URL("../member/", import.meta.url)),
+    );
+  } catch (error) {
+    console.warn(
+      `[lp-os] member app not mounted (${errorMessage(error)}); ` +
+        "set MEMBER_APP_URL or run: deno task --cwd apps/member build",
+    );
+    return null;
+  }
+}
+
+const memberHandler = await loadMemberHandler();
+
+const memberRoute = async (
+  ctx: { req: Request; info: Deno.ServeHandlerInfo },
+) =>
+  memberHandler
+    ? await memberHandler(ctx.req, ctx.info)
+    : json({ error: "member app not built" }, 503);
+app.all("/member", memberRoute); // "/member/*" alone doesn't match the bare path
+app.all("/member/*", memberRoute);
 
 /* ------------------------------------------------- relay + kiosk fleet -- */
 
@@ -475,12 +582,16 @@ app.all("/api/system/sessions", (ctx) => handleSessionsStub(ctx.req));
 app.all("/api/views", (ctx) => handleViewsStub(ctx.req));
 
 app.get("/health", async () => {
-  if (!store) return json({ ok: true, db: false, newestStoredMs: null });
+  const externalApis = externalApiStates(envValue);
+  if (!store) {
+    return json({ ok: true, db: false, newestStoredMs: null, externalApis });
+  }
   try {
     return json({
       ok: true,
       db: true,
       newestStoredMs: await store.newestTimestampMs(),
+      externalApis,
     });
   } catch (error) {
     return json({ ok: false, db: true, error: errorMessage(error) }, 500);
@@ -698,6 +809,213 @@ app.get("/api/creators", async (ctx) => {
 
 app.get("/api/roles", (ctx) => json(rbacClientConfig(resolveUserId(ctx.url))));
 
+/* ------------------------------------------------------------- demos/e2e -- */
+// APIs behind the /e2e demo page, ported from data-pimp. All carry CORS like
+// data-pimp's did (the tracker and Demos pages consume them cross-origin), and
+// all fail soft — the page falls back to its built-in demo batch.
+
+// Kiosk-catalog shape the /e2e page (and the tracker's audit search) expects.
+// data-pimp additionally merged Graylog-only samples into this catalog; the
+// Postgres samples table is the whole catalog here (revisit with /inventory).
+function sampleRowToKioskProduct(row: Record<string, unknown>) {
+  const price = Number(row.current_price) || 0;
+  const creator = String(row.creator ?? row.creator_handle ?? "").trim() ||
+    null;
+  return {
+    productId: String(row.qr_code ?? "").trim(),
+    name: String(row.name ?? "").trim(),
+    priceRange: price > 0 ? `$${price.toFixed(2)}` : "",
+    min_sku_original_price: price,
+    category: "",
+    seller: row.brand ? String(row.brand) : "Unknown seller",
+    sampleCount: 0,
+    estimatedRetailValue: 0,
+    lastSeen: row.created_at
+      ? new Date(String(row.created_at)).toISOString()
+      : null,
+    image: row.picture_url ? String(row.picture_url) : null,
+    creator,
+    creatorHandle: creator,
+    creator_handle: creator,
+  };
+}
+
+app.all("/api/products", async (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "GET") {
+    return corsJson({ error: "Method not allowed" }, 405);
+  }
+  if (!hasDb) return corsJson([]); // demo page falls back to its own batch
+  try {
+    const rows = await db.Samples.list("-created_at") as Record<
+      string,
+      unknown
+    >[];
+    return corsJson(
+      rows.map(sampleRowToKioskProduct).filter((p) => p.productId && p.name),
+    );
+  } catch (error) {
+    return corsJson({ error: errorMessage(error) }, 500);
+  }
+});
+
+// Context for the one-click E2E demo: the latest creator to post plus a few of
+// their recent product_ids. Ported from data-pimp's fetchE2EContext, asking
+// the graylog_messages store instead of an external Graylog. Priority: latest
+// order_list creator → latest sold creator → any known creator → static
+// default. Always returns something usable.
+const E2E_DEFAULT_PRODUCT_ID = "1729527400425427463";
+const E2E_RANGE_SECONDS = 60 * 60 * 24 * 365 * 2;
+
+async function fetchE2EContext(
+  defaultId: string,
+): Promise<{ creator: string; ids: string[]; source: string }> {
+  const fallback = {
+    creator: "@e2e-demo",
+    ids: [defaultId],
+    source: "default",
+  };
+  if (!store || !lifecycle) {
+    return { ...fallback, source: "default (db unconfigured)" };
+  }
+
+  // The most recent up-to-3 distinct product_ids belonging to `creator`.
+  // store.search orders newest-first, so index 0 is the latest message.
+  const recentIdsFor = (
+    messages: { message: Record<string, unknown> }[],
+    creator: string,
+  ): string[] => {
+    const ids: string[] = [];
+    for (const { message: m } of messages) {
+      if (String(m.creator ?? "").trim() !== creator) continue;
+      const pid = String(m.product_id ?? "").trim();
+      if (pid && !ids.includes(pid)) ids.push(pid);
+      if (ids.length >= 3) break;
+    }
+    return ids;
+  };
+
+  try {
+    // "Latest creator to post" = most recent order_list scrape.
+    const orders = await store.search({
+      query: "source:tiktok-bookmarklet-orders AND creator:*",
+      rangeSeconds: E2E_RANGE_SECONDS,
+      limit: 100,
+      fields: ["timestamp", "creator", "product_id"],
+    });
+    if (orders.messages.length) {
+      const creator = String(orders.messages[0].message.creator ?? "").trim();
+      if (creator) {
+        const ids = recentIdsFor(orders.messages, creator);
+        if (ids.length) {
+          return {
+            creator,
+            ids,
+            source: "graylog: latest creator order_list items",
+          };
+        }
+      }
+    }
+    // Fallback: latest resale (sold) creator + their sold items.
+    const sold = await store.search({
+      query: "sample_sold_json:* AND creator:*",
+      rangeSeconds: E2E_RANGE_SECONDS,
+      limit: 100,
+      fields: ["timestamp", "creator", "product_id"],
+    });
+    if (sold.messages.length) {
+      const creator = String(sold.messages[0].message.creator ?? "").trim();
+      if (creator) {
+        const ids = recentIdsFor(sold.messages, creator);
+        if (ids.length) {
+          return { creator, ids, source: "graylog: latest creator sold items" };
+        }
+        return {
+          creator,
+          ids: [defaultId],
+          source: "graylog: latest sold creator + default id",
+        };
+      }
+    }
+    // Fallback: any known creator + the default product.
+    const known = await lifecycle.fetchKnownCreators(1);
+    if (known.length) {
+      return {
+        creator: known[0],
+        ids: [defaultId],
+        source: "graylog: known creator + default id",
+      };
+    }
+  } catch {
+    return { ...fallback, source: "default (graylog error)" };
+  }
+  return fallback;
+}
+
+app.all("/api/e2e-context", async (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  const def = (ctx.url.searchParams.get("id") || E2E_DEFAULT_PRODUCT_ID)
+    .trim();
+  return corsJson(await fetchE2EContext(def));
+});
+
+// eBay pricing formula (packages/marketplace/ebay-pricing.ts) — pure and
+// stateless, so it must work without DATABASE_URL. data-pimp's optional
+// autoComps=1 live-eBay comps path is not ported (its scraper + file cache
+// don't fit Deploy); with no comps supplied the formula anchors on retail,
+// exactly as data-pimp degrades when eBay is unreachable.
+app.all("/api/ebay-price", async (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  try {
+    const q = ctx.url.searchParams;
+    const body = ctx.req.method === "POST" ? await readJsonBody(ctx.req) : {};
+    // Coerce any picked value (body value or query string) to string | number
+    // | undefined — the formula parses "$25.00"-style strings itself.
+    const pick = (k: string): string | number | undefined => {
+      const v = body[k];
+      if (typeof v === "number" || typeof v === "string") return v;
+      if (v !== undefined && v !== null) return String(v);
+      const qv = q.get(k);
+      return qv === null ? undefined : qv;
+    };
+    // Comps: JSON body array, a comma-separated string body, or a
+    // comma-separated ?comps=25,28,30 query.
+    const comps: Array<string | number> = Array.isArray(body.comps)
+      ? (body.comps as unknown[]).map((x) =>
+        typeof x === "number" ? x : String(x)
+      )
+      : (typeof body.comps === "string" ? body.comps : (q.get("comps") || ""))
+        .split(",").map((s) => s.trim()).filter(Boolean);
+    const input: EbayPriceInput = {
+      retail: pick("retail"),
+      costBasis: pick("costBasis"),
+      comps,
+      condition: typeof pick("condition") === "string"
+        ? pick("condition") as string
+        : undefined,
+      daysListed: pick("daysListed"),
+      feePct: pick("feePct"),
+      fixedFee: pick("fixedFee"),
+      shipping: pick("shipping"),
+      minMarginAbs: pick("minMarginAbs"),
+      minMarginPct: pick("minMarginPct"),
+      undercutPct: pick("undercutPct"),
+      markdownSchedule: (body.markdownSchedule ?? undefined) as EbayPriceInput[
+        "markdownSchedule"
+      ],
+    };
+    const result = computeEbayPrice(input);
+    const wantLadder = q.get("ladder") === "1" || body.ladder === true;
+    return corsJson({
+      ...result,
+      compsSource: comps.length ? "provided" : "none",
+      ...(wantLadder ? { ladder: markdownLadder(input) } : {}),
+    });
+  } catch (error) {
+    return corsJson({ ok: false, error: errorMessage(error) }, 400);
+  }
+});
+
 /* -------------------------------------------------- marketplace listings -- */
 // Real listings (eBay first): the listings table is the current-status truth
 // UIs render; the Graylog "listed"/"listing_failed" events remain the
@@ -726,6 +1044,14 @@ function marketplaceParam(params: Record<string, string>): string {
 }
 
 app.all("/api/listings", async (ctx) => {
+  // The eBay kill switch outranks DB state — "we turned it off" must not be
+  // masked by "DATABASE_URL not configured". GET stays available: reading the
+  // listings table is a DB read, not an eBay call.
+  if (
+    ctx.req.method === "POST" && !externalApiEnabled(envValue, "ebay")
+  ) {
+    return json({ ok: false, error: "ebay disabled" }, 503);
+  }
   if (!hasDb) return dbUnavailable();
   if (ctx.req.method === "GET") {
     try {
@@ -761,6 +1087,9 @@ app.all("/api/listings/run-due", async (ctx) => {
   if (ctx.req.method !== "POST") {
     return json({ ok: false, error: "Method not allowed" }, 405);
   }
+  if (!externalApiEnabled(envValue, "ebay")) {
+    return json({ ok: false, error: "ebay disabled" }, 503);
+  }
   if (!listingService) return dbUnavailable();
   try {
     return json(await listingService.runAutoListPass());
@@ -787,6 +1116,9 @@ app.all("/api/marketplaces", async (ctx) => {
 app.all("/api/marketplaces/:marketplace/verify", async (ctx) => {
   if (ctx.req.method !== "POST") {
     return json({ ok: false, error: "Method not allowed" }, 405);
+  }
+  if (!externalApiEnabled(envValue, "ebay")) {
+    return json({ ok: false, detail: "ebay disabled" }, 503);
   }
   if (!listingService) return dbUnavailable();
   const marketplace = marketplaceParam(ctx.params);
@@ -870,6 +1202,144 @@ app.all("/api/marketplaces/:marketplace", async (ctx) => {
   }
 });
 
+/* ------------------------------------------------------ product analysis -- */
+// The Product Analysis dashboard (/inventory), ported from data-pimp: a static
+// page (static/inventory.html + inventory.css/js) over five Graylog-backed
+// endpoints. Reads parse product scrapes (rows_json/core_data_json/summary_json)
+// out of the graylog_messages store; price edits persist back as
+// sample_edit_json events (core/product-analysis.ts). Without a DB everything
+// degrades the way data-pimp degraded without GRAYLOG_*: health reports
+// graylogConfigured:false (the page shows its setup banner), lists come back
+// empty, and per-product routes 404 — no hard 503s.
+
+const productAnalysis = createProductAnalysis({ store, env: envValue });
+
+app.get("/inventory", async (ctx) => {
+  const res = await serveStatic("/inventory.html", ctx.req.method);
+  return res ?? json({ error: "inventory page missing" }, 500);
+});
+
+// Setup/health shim for the dashboard (the OS-level /health above is separate):
+// the page reads only .graylogConfigured to decide on its setup banner.
+app.get("/api/health", () =>
+  json({
+    ok: true,
+    graylogConfigured: Boolean(store),
+    scrapeCreatorsConfigured: productAnalysis.scrapeCreatorsConfigured(),
+    externalApis: externalApiStates(envValue),
+  }));
+
+app.get("/api/product/:id", async (ctx) => {
+  try {
+    const id = decodeURIComponent(ctx.params.id || "");
+    const product = await productAnalysis.fetchProductWithEdits(id);
+    if (!product) {
+      return json({ ok: false, error: "Product not found in Graylog" }, 404);
+    }
+    return json(product);
+  } catch (error) {
+    return json({ error: errorMessage(error) }, 500);
+  }
+});
+
+app.all("/api/unpriced-samples", async (ctx) => {
+  if (ctx.req.method !== "GET") {
+    return json({ ok: false, error: "Method not allowed" }, 405);
+  }
+  try {
+    // The user's ?query= is matched in JS (matchesQuery), never in SQL.
+    return json(
+      await productAnalysis.listUnpricedSamples(
+        ctx.url.searchParams.get("query") || "",
+        Number(ctx.url.searchParams.get("limit") || 100),
+      ),
+    );
+  } catch (error) {
+    return json({ error: errorMessage(error) }, 500);
+  }
+});
+
+app.all("/api/unpriced-samples/:id", async (ctx) => {
+  if (ctx.req.method !== "PATCH") {
+    return json({ ok: false, error: "Method not allowed" }, 405);
+  }
+  try {
+    return json(
+      await productAnalysis.updateSamplePrice(
+        decodeURIComponent(ctx.params.id || ""),
+        await readJsonBody(ctx.req),
+      ),
+    );
+  } catch (error) {
+    return json({ error: errorMessage(error) }, 500);
+  }
+});
+
+app.all("/api/unpriced-samples/:id/fetch-price", async (ctx) => {
+  if (ctx.req.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed" }, 405);
+  }
+  try {
+    return json(
+      await productAnalysis.fetchPriceForSample(
+        decodeURIComponent(ctx.params.id || ""),
+      ),
+    );
+  } catch (error) {
+    // Operator kill switch (EXTERNAL_API_SCRAPECREATORS=off) → 503, distinct
+    // from a real upstream failure so "we turned it off" and "ScrapeCreators
+    // is down" stay distinguishable.
+    if (error instanceof ExternalApiDisabledError) {
+      return json({ ok: false, error: error.message }, 503);
+    }
+    // A ScrapeCreators miss/outage, a missing API key, or a product missing
+    // from Graylog surfaces as a clean 502 {ok:false, error} — never a raw 500
+    // stack trace — so the row simply stays unpriced (data-pimp convention).
+    return json({ ok: false, error: errorMessage(error) }, 502);
+  }
+});
+
+app.get("/api/comparison", async () => {
+  try {
+    return json(await productAnalysis.fetchComparisonWithEdits());
+  } catch (error) {
+    return json({ error: errorMessage(error) }, 500);
+  }
+});
+
+/* ------------------------------------------------------------------ kiosk -- */
+// The Inventory Manager kiosk, rebuilt vanilla from data-pimp's React SPA
+// (static/kiosk.html + kiosk.js). Routing is client-side, so the bare path
+// and every subpath serve the same shell. /kiosk/checkout?code= deep links
+// are wire contract with os.js routeScanToKiosk and the scan relay.
+
+const sampleImage = createSampleImage({ db, env: envValue });
+
+app.get("/kiosk", async (ctx) => {
+  const res = await serveStatic("/kiosk.html", ctx.req.method);
+  return res ?? json({ error: "kiosk page missing" }, 500);
+});
+app.get("/kiosk/*", async (ctx) => {
+  const res = await serveStatic("/kiosk.html", ctx.req.method);
+  return res ?? json({ error: "kiosk page missing" }, 500);
+});
+
+// Resolve (and backfill) a sample's product image via ScrapeCreators.
+// data-pimp contract: 200 {id, picture_url} with picture_url null on a miss.
+app.all("/api/samples/:id/image", async (ctx) => {
+  if (ctx.req.method !== "GET") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+  if (!hasDb) return dbUnavailable();
+  try {
+    const id = ctx.params.id;
+    const resolved = await sampleImage.resolve({ sampleId: id });
+    return json({ id, picture_url: resolved?.url ?? null });
+  } catch (error) {
+    return json({ error: errorMessage(error) }, 500);
+  }
+});
+
 // Unknown /api/* → JSON 404 (data-pimp convention), not the HTML default.
 app.all("/api/*", () => json({ error: "API endpoint not found" }, 404));
 
@@ -884,7 +1354,7 @@ if (import.meta.main) {
       "[lp-os] DATABASE_URL not set — DB-backed APIs will return 503",
     );
   }
-  if (listingService) {
+  if (listingService && externalApiEnabled(envValue, "ebay")) {
     // Automatic listing: fires due auto-list schedules and (where opted in)
     // lists cleared_to_sell samples. In-process interval — no new systems.
     const intervalMs = Number(envValue("AUTO_LIST_INTERVAL_MS") ?? "300000") ||
@@ -894,6 +1364,8 @@ if (import.meta.main) {
       intervalMs,
       logger: (message) => console.log(`[lp-os] ${message}`),
     });
+  } else if (listingService) {
+    console.log("[lp-os] auto-lister off (EXTERNAL_API_EBAY=off)");
   }
   const port = Number(envValue("PORT") ?? "8000") || 8000;
   await app.listen({ port });

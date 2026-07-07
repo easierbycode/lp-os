@@ -161,17 +161,18 @@ function roleForUser(user) {
 }
 
 // An "LP-OS shell tab" is a tab running the LP-OS desktop shell with an
-// explicit ?user= param. The shell is localhost:8000 in dev; production
-// domain is TBD, so we also accept any tab whose title mentions LP-OS.
+// explicit ?user= param. Production is thirsty.store; localhost:8000 in dev;
+// the title fallback keeps other hosts (previews, tunnels) working.
 function shellUserFromTab(tab) {
   if (!tab || !tab.url) return null;
   let url;
   try { url = new URL(tab.url); } catch (_) { return null; }
   const user = url.searchParams.get('user');
   if (!user) return null;
+  const prodHost = url.hostname === 'thirsty.store';
   const localHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
   const titledShell = /lp-?os/i.test(tab.title || '');
-  return (localHost || titledShell) ? user : null;
+  return (prodHost || localHost || titledShell) ? user : null;
 }
 
 async function resolveRole() {

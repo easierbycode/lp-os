@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>E2E · Sample Lifecycle Showcase</title>
+    <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070a12;
+      --card: #11151f;
+      --border: #1d2433;
+      --fg: #eef1f6;
+      --muted: #9aa6bd;
+      --orange: #fb923c;
+      --green: #22c55e;
+      --sky: #38bdf8;
+      --gold: #ffe27a;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      overflow: hidden;
+      position: relative;
+      cursor: none;
+      font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        sans-serif;
+      background: radial-gradient(120% 120% at 80% -10%, #131a2b, var(--bg) 60%);
+      color: var(--fg);
+    }
+
+    /* ---- top bar: running tally ---- */
+    .topbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--border);
+      background: #0c111b;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 700;
+    }
+    .brand .dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #ff7a18, #af002d 85%);
+      font-size: 15px;
+    }
+    .tally {
+      margin-left: auto;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .tally .lbl {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .tally .amt {
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+    }
+    .creator {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .creator b {
+      color: var(--fg);
+    }
+
+    /* ---- two-pane stage ---- */
+    .stage {
+      position: absolute;
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+    }
+    .pane {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 16px 18px;
+      overflow: hidden;
+    }
+    .pane.left {
+      border-right: 1px solid var(--border);
+      background: #0a0e16;
+    }
+    .pane h2 {
+      margin: 2px 0 12px;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .pane h2 .badge {
+      color: var(--orange);
+    }
+
+    /* ---- order list (left) ---- */
+    .order {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      opacity: 0;
+      transform: translateX(-14px);
+      transition: opacity .3s ease, transform .3s ease, border-color .2s, background
+        .2s;
+    }
+    .order.in {
+      opacity: 1;
+      transform: none;
+    }
+    .order.clicked {
+      border-color: #2f6b3f;
+      background: #102016;
+    }
+    .thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 9px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+    }
+    .order .meta {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .order .nm {
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .order .br {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .order .vals {
+      text-align: right;
+      flex: 0 0 auto;
+    }
+    .order .paid {
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .order .retail {
+      font-weight: 700;
+      color: var(--gold);
+      font-size: 14px;
+    }
+    .order .check {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid #39425a;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      color: #0a0e16;
+      font-size: 12px;
+      transition: background .2s, border-color .2s;
+    }
+    .order.clicked .check {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    /* ---- kiosk grid (right) ---- */
+    .kiosk-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 2px 0 12px;
+    }
+    .kiosk-head h1 {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0;
+    }
+    .kiosk-head .sub {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .kcard {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(12px) scale(.97);
+      transition: opacity .4s ease, transform .4s cubic-bezier(.2,.9,.3,1.2),
+        box-shadow .2s;
+    }
+    .kcard.in {
+      opacity: 1;
+      transform: none;
+    }
+    .kcard.hero.focus {
+      box-shadow: 0 0 0 2px var(--orange), 0 12px 30px #0008;
+    }
+    .kcard .img {
+      aspect-ratio: 1/1;
+      display: grid;
+      place-items: center;
+      font-size: 40px;
+      position: relative;
+    }
+    .kcard .body {
+      padding: 9px 11px 11px;
+    }
+    .kcard .nm {
+      font-weight: 600;
+      font-size: 12.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .kcard .br {
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .kcard .pr {
+      font-weight: 800;
+      margin-top: 5px;
+      font-size: 13px;
+    }
+    .kcard .pr .sold {
+      color: var(--sky);
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .sbadge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      border: 1px solid;
+      backdrop-filter: blur(2px);
+      background: rgb(11 13 17 / 72%);
+      transition: color .25s, border-color .25s;
+    }
+    .sbadge.available,
+    .sbadge.cleared {
+      color: var(--green);
+      border-color: #2f7d4f;
+    }
+    .sbadge.sold {
+      color: var(--sky);
+      border-color: #246c8a;
+    }
+    .draftbtn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--orange);
+      color: var(--orange);
+      background: rgb(11 13 17 / 72%);
+      opacity: 0;
+      transition: opacity .25s;
+    }
+    .kcard.cleared .draftbtn {
+      opacity: 1;
+    }
+
+    .kiosk-loading {
+      display: grid;
+      place-items: center;
+      height: 70%;
+      color: var(--muted);
+      gap: 12px;
+    }
+    .spinner {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 3px solid #222b3d;
+      border-top-color: var(--orange);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ---- fake cursor ---- */
+    .cursor {
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 22px;
+      height: 22px;
+      pointer-events: none;
+      transition: transform .7s cubic-bezier(.4,.1,.2,1);
+      will-change: transform;
+      filter: drop-shadow(0 2px 3px #000a);
+    }
+    .cursor.fast {
+      transition-duration: .45s;
+    }
+    .ring {
+      position: fixed;
+      z-index: 9998;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      pointer-events: none;
+      border: 2px solid var(--orange);
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+    .ring.go {
+      animation: ring .5s ease-out;
+    }
+    @keyframes ring {
+      0% {
+        opacity: .9;
+        width: 8px;
+        height: 8px;
+      }
+      100% {
+        opacity: 0;
+        width: 46px;
+        height: 46px;
+      }
+    }
+
+    /* ---- eBay draft overlay (lifted from ebay-draft.js) ---- */
+    .ebay-ov {
+      position: fixed;
+      inset: 0;
+      z-index: 8000;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(6,8,12,.62);
+      backdrop-filter: blur(2px);
+    }
+    .ebay-ov.show {
+      display: grid;
+      animation: fade .2s ease;
+    }
+    @keyframes fade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    .ebd {
+      width: min(520px, 94vw);
+      max-height: 90vh;
+      overflow: auto;
+      background: #fff;
+      color: #111;
+      border-radius: 14px;
+      box-shadow: 0 40px 90px -30px rgba(0,0,0,.7);
+      font: 14px/1.4 system-ui, sans-serif;
+    }
+    .ebd-top {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ebd-logo {
+      font-weight: 700;
+      font-size: 21px;
+      letter-spacing: -.5px;
+    }
+    .ebd-logo .e {
+      color: #e53238;
+    }
+    .ebd-logo .b {
+      color: #0064d2;
+    }
+    .ebd-logo .a {
+      color: #f5af02;
+    }
+    .ebd-logo .y {
+      color: #86b817;
+    }
+    .ebd-h {
+      color: #555;
+      font-size: 15px;
+    }
+    .ebd-x {
+      margin-left: auto;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #f3f4f6;
+      color: #444;
+      display: grid;
+      place-items: center;
+    }
+    .ebd-banner {
+      margin: 12px 16px 0;
+      background: #fff3e6;
+      border: 1px solid #f3c08a;
+      color: #b3560a;
+      font-size: 12.5px;
+      padding: 8px 11px;
+      border-radius: 8px;
+    }
+    .ebd-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .ebd-fld {
+      position: relative;
+    }
+    .ebd-fld > label {
+      display: block;
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .ebd-box {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      transition: box-shadow .2s, border-color .2s;
+    }
+    .ebd-box.flash {
+      border-color: #f5af02;
+      box-shadow: 0 0 0 3px #f5af0233;
+    }
+    .ebd-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .ebd-pill {
+      display: inline-block;
+      background: #e7f5e9;
+      color: #1b7a2e;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-weight: 600;
+    }
+    .ebd-ph {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      display: inline-grid;
+      place-items: center;
+      font-size: 30px;
+      background: #f1f3f5;
+    }
+    .ebd-chip {
+      position: absolute;
+      top: -9px;
+      right: 8px;
+      background: #fff3e6;
+      color: #b3560a;
+      border: 1px solid #f3c08a;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 99px;
+      animation: ebpulse 1.8s ease-in-out infinite;
+    }
+    .ebd-rec {
+      margin-top: 5px;
+      color: #1b7a2e;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    @keyframes ebpulse {
+      0%,
+      100% {
+        opacity: .55;
+      }
+      50% {
+        opacity: 1;
+      }
+    }
+    .ebd-foot {
+      position: sticky;
+      bottom: 0;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .ebd-meta {
+      color: #9aa3af;
+      font-size: 12px;
+    }
+    .ebd-open {
+      background: #0064d2;
+      color: #fff;
+      border: 0;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 9px 18px;
+      border-radius: 99px;
+    }
+    .ebd-open.flash {
+      box-shadow: 0 0 0 4px #0064d233;
+    }
+
+    /* ---- mark-as-sold dialog (lifted from SellDialog) ---- */
+    .sold-ov {
+      position: fixed;
+      inset: 0;
+      z-index: 8000;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(6,8,12,.62);
+      backdrop-filter: blur(2px);
+    }
+    .sold-ov.show {
+      display: grid;
+      animation: fade .2s ease;
+    }
+    .sold-dlg {
+      width: min(420px, 94vw);
+      background: #11151f;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .sold-dlg h3 {
+      margin: 0 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+    }
+    .sold-dlg h3 .tag {
+      color: var(--sky);
+    }
+    .sold-card {
+      background: #0c111b;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .sold-card .nm {
+      font-weight: 600;
+    }
+    .sold-card .br {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .sold-fld {
+      margin-bottom: 10px;
+    }
+    .sold-fld label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .sold-fld .inp {
+      background: #0c111b;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      font-size: 13px;
+    }
+    .sold-btn {
+      width: 100%;
+      background: var(--sky);
+      color: #06121a;
+      border: 0;
+      font-weight: 700;
+      padding: 10px;
+      border-radius: 9px;
+      font-size: 14px;
+    }
+
+    /* ---- Price-Is-Right showcase finale (lifted from samples-modal) ---- */
+    .showcase {
+      position: fixed;
+      inset: 0;
+      z-index: 8500;
+      display: none;
+      flex-direction: column;
+      background: linear-gradient(160deg, #3a1066, #5a1e9c 55%, #1c0940);
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      overflow: auto;
+    }
+    .showcase.show {
+      display: flex;
+      animation: fade .35s ease;
+    }
+    .bulbs {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 14px;
+      background-image: radial-gradient(circle, #ffe27a 0 3px, transparent 4px);
+      background-size: 26px 14px;
+      opacity: .85;
+      animation: chase 1s steps(2) infinite;
+    }
+    .bulbs.top {
+      top: 14px;
+    }
+    .bulbs.bot {
+      bottom: 14px;
+    }
+    @keyframes chase {
+      to {
+        background-position: 26px 0;
+      }
+    }
+    .sc-title {
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 700;
+      font-size: 26px;
+      color: var(--gold);
+      text-shadow: 0 2px 0 #7a3c00, 0 0 18px rgba(255,210,80,.5);
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .sc-sub {
+      color: #d9c7ff;
+      font-size: 13px;
+      margin-bottom: 22px;
+    }
+    .sc-lots {
+      width: min(540px, 94vw);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .sc-lot {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,226,122,.25);
+      opacity: 0;
+      transform: translateY(12px) scale(.98);
+      transition: opacity .4s ease, transform .4s cubic-bezier(.2,.9,.3,1.3);
+    }
+    .sc-lot.in {
+      opacity: 1;
+      transform: none;
+    }
+    .sc-lot .ico {
+      font-size: 30px;
+    }
+    .sc-lot .t {
+      flex: 1 1 auto;
+    }
+    .sc-lot .t .h {
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .sc-lot .t .d {
+      color: #cdbcf0;
+      font-size: 12px;
+    }
+    .sc-lot .v {
+      font-weight: 800;
+      font-size: 22px;
+      font-variant-numeric: tabular-nums;
+    }
+    .sc-lot.value .v {
+      color: var(--gold);
+    }
+    .sc-lot.profit .v {
+      color: #aeffa0;
+    }
+    .sc-final {
+      width: min(540px, 94vw);
+      margin-top: 18px;
+      text-align: center;
+      padding: 22px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,226,122,.4);
+      background: radial-gradient(120% 120% at 50% 0%, rgba(255,226,122,.22),
+        rgba(255,226,122,0));
+      opacity: 0;
+      transform: scale(.9);
+      transition: opacity .45s ease, transform .45s cubic-bezier(.2,.9,.3,1.4);
+    }
+    .sc-final.in {
+      opacity: 1;
+      transform: none;
+    }
+    .sc-final .lab {
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: #e7d6ff;
+      font-size: 12px;
+    }
+    .sc-final .amt {
+      font-family: Georgia, serif;
+      font-weight: 800;
+      font-size: 46px;
+      color: var(--gold);
+      text-shadow: 0 2px 0 #7a3c00, 0 0 24px rgba(255,210,80,.6);
+      margin: 4px 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .sc-final .kick {
+      color: #d9c7ff;
+      font-size: 13px;
+    }
+    .sc-final .kick b {
+      color: #aeffa0;
+    }
+
+    .replay {
+      position: fixed;
+      z-index: 8600;
+      bottom: 26px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ff9a3c, #ff7a18);
+      color: #0b0b0f;
+      border: 0;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 10px 22px;
+      border-radius: 999px;
+      display: none;
+      cursor: pointer;
+    }
+    .replay.show {
+      display: block;
+    }
+
+    /* ---- info icon + "recreate with Claude" modal ---- */
+    .infobtn {
+      position: fixed;
+      z-index: 9001;
+      top: 14px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font: italic 700 16px/1 Georgia, serif;
+      cursor: pointer;
+      color: #cfcfd6;
+      background: #1a1a22cc;
+      border: 1px solid #2a2a35;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px #0006;
+    }
+    .infobtn:hover {
+      border-color: #3a3a48;
+      color: #fff;
+    }
+    .howto-ov {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(4,6,12,.72);
+      backdrop-filter: blur(4px);
+    }
+    .howto-ov.show {
+      display: grid;
+      animation: fade .2s ease;
+    }
+    .howto {
+      width: min(580px, 96vw);
+      max-height: 90vh;
+      overflow: auto;
+      background: #11151f;
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 24px;
+      box-shadow: 0 40px 90px -30px #000;
+    }
+    .howto h3 {
+      margin: 0 0 4px;
+      font-size: 18px;
+    }
+    .howto .lead {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0 0 14px;
+    }
+    .step {
+      display: flex;
+      gap: 11px;
+      padding: 11px 0;
+      border-top: 1px solid var(--border);
+    }
+    .step:first-of-type {
+      border-top: 0;
+    }
+    .step .n {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #1d2433;
+      color: var(--orange);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .step .d {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .step .d b {
+      color: var(--fg);
+    }
+    .sk {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11.5px;
+      color: var(--sky);
+      background: #0c1320;
+      border: 1px solid #1d2c40;
+      border-radius: 6px;
+      padding: 1px 6px;
+      white-space: nowrap;
+    }
+    .howto-foot {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .copybtn {
+      background: linear-gradient(135deg, #ff9a3c, #ff7a18);
+      color: #0b0b0f;
+      border: 0;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 9px 16px;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+    .closebtn {
+      background: #1d2433;
+      color: var(--fg);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      padding: 9px 16px;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+    .copynote {
+      color: var(--green);
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .copynote.show {
+      opacity: 1;
+    }
+
+    /* ---- real product images (overlay the emoji-on-tile fallback) ---- */
+    .thumb,
+    .ebd-ph {
+      position: relative;
+      overflow: hidden;
+    }
+    .ph {
+      position: relative;
+      z-index: 0;
+    }
+    .pimg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      background: inherit;
+    }
+    .kcard .img .sbadge,
+    .kcard .img .draftbtn {
+      z-index: 2;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand"><span class="dot">▶</span> E2E · Sample Lifecycle</div>
+      <span class="creator" id="creator">creator <b>@sample_squad</b></span>
+      <div
+        class="tally"><span class="lbl">Sample value</span><span class="amt" id="tally">$0.00</span></div>
+    </div>
+
+    <div class="stage">
+      <div class="pane left">
+        <h2><span class="badge">①</span> TikTok Shop · Order list <span id="ol-count" style="color:#9aa6bd"></span></h2>
+        <div id="orderlist"></div>
+      </div>
+      <div class="pane right">
+        <div
+          class="kiosk-head"><h1>Samples</h1><span class="sub" id="kiosk-sub">loading…</span></div>
+        <div id="kiosk">
+          <div class="kiosk-loading">
+            <div class="spinner"></div>
+            <div>Loading Inventory Manager…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- eBay draft overlay -->
+    <div class="ebay-ov" id="ebay-ov">
+      <div class="ebd" id="ebd"></div>
+    </div>
+
+    <!-- mark-as-sold dialog -->
+    <div class="sold-ov" id="sold-ov">
+      <div class="sold-dlg">
+        <h3><span class="tag">🏷</span> Mark as Sold</h3>
+        <div class="sold-card">
+          <div class="nm" id="sold-nm"></div>
+          <div class="br" id="sold-br"></div>
+        </div>
+        <div
+          class="sold-fld"><label>Your Name (Operator) *</label><div class="inp">DJ</div></div>
+        <div
+          class="sold-fld"><label>Buyer *</label><div class="inp">eBay</div></div>
+        <div
+          class="sold-fld"><label>Sold Price *</label><div class="inp" id="sold-price">$0.00</div></div>
+        <button class="sold-btn" id="sold-btn">Mark as Sold</button>
+      </div>
+    </div>
+
+    <!-- Price-Is-Right showcase -->
+    <div class="showcase" id="showcase">
+      <div class="bulbs top"></div>
+      <div class="bulbs bot"></div>
+      <div class="sc-title">Today's Sample Showcase</div>
+      <div class="sc-sub">one batch · $0 paid · followed end-to-end</div>
+      <div class="sc-lots">
+        <div class="sc-lot value" id="lot-value">
+          <div class="ico">📦</div>
+          <div class="t">
+            <div class="h">Free sample haul</div>
+            <div
+              class="d">retail value that would've been on your share screen</div>
+          </div>
+          <div class="v" id="lot-value-amt">$0</div>
+        </div>
+        <div class="sc-lot profit" id="lot-profit">
+          <div class="ico">💸</div>
+          <div class="t">
+            <div class="h">Resold on eBay</div>
+            <div class="d">marketplace profit, net of fees · cost $0</div>
+          </div>
+          <div class="v" id="lot-profit-amt">$0</div>
+        </div>
+      </div>
+      <div class="sc-final" id="sc-final">
+        <div class="lab">Total value created</div>
+        <div class="amt" id="sc-final-amt">$0</div>
+        <div
+          class="kick">free samples + resale — <b id="sc-margin">100%</b> margin on <b>$0</b> spent.</div>
+      </div>
+    </div>
+
+    <button class="replay" id="replay">↻ Replay</button>
+
+    <!-- info icon → "recreate with Claude" -->
+    <button class="infobtn" id="infobtn" type="button"
+      title="Recreate this with Claude"
+      aria-label="How to recreate this with Claude">i</button>
+    <div class="howto-ov" id="howto-ov">
+      <div class="howto">
+        <h3>🤖 Recreate this with Claude</h3>
+        <p
+          class="lead">Everything you just watched is a real LP-OS skill. Each step is something you can just ask Claude to do:</p>
+        <div class="step">
+          <div class="n">1</div>
+          <div
+            class="d"><span class="sk">samples-import</span> &nbsp;<b>Import &amp; assign</b> — paste your TikTok <i>order_list</i> product IDs; Claude hydrates each and adds them to inventory, assigned to a creator.</div>
+        </div>
+        <div class="step">
+          <div class="n">2</div>
+          <div
+            class="d"><span class="sk">sample-lifecycle</span> &nbsp;<b>Cleared to Sell</b> — “set the Ninja Air Fryer to <i>cleared_to_sell</i>.”</div>
+        </div>
+        <div class="step">
+          <div class="n">3</div>
+          <div
+            class="d"><span class="sk">list_on_marketplace</span> + <span class="sk">ebay-listing</span> &nbsp;<b>Draft the eBay listing</b> — Claude drafts it and opens eBay’s create-listing page pre-filled (it never publishes for you).</div>
+        </div>
+        <div class="step">
+          <div class="n">4</div>
+          <div
+            class="d"><span class="sk">sample-lifecycle</span> &nbsp;<b>Mark sold</b> — “mark it sold on eBay for $72,” attributing the resale revenue to the creator.</div>
+        </div>
+        <div class="step">
+          <div class="n">5</div>
+          <div
+            class="d"><span class="sk">graylog-query</span> &nbsp;<b>See the payoff</b> — “show that creator’s resale revenue,” next to the free-sample retail value = total value created.</div>
+        </div>
+        <div class="howto-foot">
+          <button class="copybtn" id="copybtn">📋 Copy the full prompt</button>
+          <button class="closebtn" id="howto-close">Close</button>
+          <span class="copynote"
+            id="copynote">Copied — paste it into Claude ✓</span>
+        </div>
+      </div>
+    </div>
+
+    <svg class="cursor" id="cursor" viewBox="0 0 24 24" fill="none">
+      <path d="M5 3l14 8-6 1.5L9.5 18 5 3z" fill="#fff" stroke="#111"
+        stroke-width="1.3" stroke-linejoin="round" />
+    </svg>
+    <div class="ring" id="ring"></div>
+
+    <script>
+    "use strict";
+    var usd = function (n) {
+      return "$" +
+        Number(n).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+    };
+    var sleep = function (ms) {
+      return new Promise(function (r) {
+        setTimeout(r, ms);
+      });
+    };
+    var $ = function (id) {
+      return document.getElementById(id);
+    };
+    var round2 = function (n) {
+      return Math.round(Number(n) * 100) / 100;
+    };
+    // Escape dynamic strings (real catalog names/brands/urls) before they go into innerHTML.
+    var esc = function (s) {
+      return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+      });
+    };
+
+    // Curated fallback batch (emoji art) — used only if the live catalog can't
+    // supply enough real products with images. loadItems() replaces ITEMS with
+    // real samples (name/brand/price/image) from /api/products when available.
+    var FALLBACK_ITEMS = [
+      {
+        name: "Ninja AF101 Air Fryer 4qt",
+        brand: "Ninja",
+        retail: 89.99,
+        emoji: "🍳",
+        hero: true,
+        salePrice: 72.00,
+        fees: 9.36,
+      },
+      {
+        name: "Stanley Quencher H2.0 40oz",
+        brand: "Stanley",
+        retail: 45.00,
+        emoji: "🥤",
+      },
+      {
+        name: "CeraVe Moisturizing Bundle",
+        brand: "CeraVe",
+        retail: 38.99,
+        emoji: "🧴",
+      },
+      {
+        name: "Olaplex No.3 Hair Perfector",
+        brand: "Olaplex",
+        retail: 30.00,
+        emoji: "💆",
+      },
+      { name: "Tide PODS (81 ct)", brand: "Tide", retail: 24.99, emoji: "🧺" },
+      {
+        name: "Crest 3D White (3-pack)",
+        brand: "Crest",
+        retail: 14.97,
+        emoji: "🪥",
+      },
+    ];
+    var TILE = ["#3a2a5e", "#264a63", "#5e2a3a", "#2a5e4a", "#5e4a2a", "#2a3a5e"];
+    var ITEMS = FALLBACK_ITEMS, hero, SAMPLE_VALUE, PROFIT, TOTAL;
+
+    // Derive the hero + tallies from whatever ITEMS currently holds.
+    function recompute() {
+      hero = ITEMS.find(function (i) {
+        return i.hero;
+      }) || ITEMS[0];
+      if (!hero.salePrice) {
+        hero.salePrice = Math.max(1, Math.round(hero.retail * 0.8));
+      }
+      if (hero.fees == null) hero.fees = round2(hero.salePrice * 0.13);
+      SAMPLE_VALUE = round2(ITEMS.reduce(function (s, i) {
+        return s + Number(i.retail || 0);
+      }, 0));
+      PROFIT = round2(hero.salePrice - hero.fees);
+      TOTAL = round2(SAMPLE_VALUE + PROFIT);
+    }
+    recompute();
+
+    // Pull up to 6 real products (with images) from the durable catalog and the
+    // creator's actual recent order_list items. Falls back silently to the
+    // curated emoji batch if the catalog is unavailable or too thin.
+    async function loadItems() {
+      try {
+        var results = await Promise.all([
+          fetch("/api/products").then(function (r) {
+            return r.ok ? r.json() : [];
+          }).catch(function () {
+            return [];
+          }),
+          fetch("/api/e2e-context").then(function (r) {
+            return r.ok ? r.json() : null;
+          }).catch(function () {
+            return null;
+          }),
+        ]);
+        var catalog = results[0], ctx = results[1];
+        if (ctx && ctx.creator) {
+          demoCreator = String(ctx.creator);
+          $("creator").innerHTML = "creator <b>" + esc(demoCreator) + "</b>";
+        }
+        var imaged = (Array.isArray(catalog) ? catalog : [])
+          .filter(function (p) {
+            return p && p.image && p.name && Number(p.min_sku_original_price) > 0;
+          })
+          .map(function (p) {
+            return {
+              name: String(p.name),
+              brand: String(
+                p.seller && p.seller !== "Unknown seller"
+                  ? p.seller
+                  : "TikTok Shop",
+              ),
+              retail: Number(p.min_sku_original_price),
+              image: String(p.image),
+              productId: String(p.productId || ""),
+            };
+          });
+        if (imaged.length < 3) return; // not enough real photos — keep the curated batch
+
+        var byId = {};
+        imaged.forEach(function (p) {
+          if (p.productId) byId[p.productId] = p;
+        });
+        var chosen = [], seen = {};
+        // Lead with the creator's real recent order_list items (when imaged)…
+        ((ctx && Array.isArray(ctx.ids)) ? ctx.ids : []).forEach(function (id) {
+          var p = byId[String(id)];
+          if (p && !seen[p.productId]) {
+            seen[p.productId] = 1;
+            chosen.push(p);
+          }
+        });
+        // …then fill from the priciest remaining catalog products.
+        imaged.slice().sort(function (a, b) {
+          return b.retail - a.retail;
+        }).forEach(function (p) {
+          if (chosen.length >= 6) return;
+          var k = p.productId || p.name;
+          if (seen[k]) return;
+          seen[k] = 1;
+          chosen.push(p);
+        });
+        chosen = chosen.slice(0, 6);
+
+        // Hero = priciest of the batch (the biggest resale story).
+        var h = chosen.reduce(function (m, p) {
+          return p.retail > m.retail ? p : m;
+        }, chosen[0]);
+        h.hero = true;
+        h.salePrice = Math.max(1, Math.round(h.retail * 0.8));
+        h.fees = round2(h.salePrice * 0.13);
+
+        ITEMS = chosen;
+        recompute();
+      } catch (e) { /* keep the curated fallback */ }
+    }
+
+    // Illustrative competitor comps for the showcase, derived from retail, so the
+    // real pricing formula can demonstrate its headline move: UNDERCUTTING the
+    // market. These comp INPUTS are demo data; the price the draft shows is the
+    // genuine formula output from /api/ebay-price.
+    function synthComps(retail) {
+      var r = Number(retail) || 0;
+      if (r <= 0) return [];
+      return [round2(r * 0.78), round2(r * 0.86), round2(r * 0.92)];
+    }
+
+    // Price the hero with the real eBay pricing formula (core/ebay-pricing.ts via
+    // /api/ebay-price): undercut the competition, move fast, never below the
+    // fee-aware floor. Replaces the old naive retail*0.8 guess. Falls back silently
+    // to whatever salePrice is already set if the endpoint is unreachable.
+    async function priceHero(h) {
+      if (!h || h.__priced) return;
+      h.__priced = true;
+      try {
+        var res = await fetch("/api/ebay-price", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            retail: h.retail,
+            costBasis: 0,
+            condition: "new",
+            comps: synthComps(h.retail),
+          }),
+        });
+        if (!res.ok) return;
+        var d = await res.json();
+        if (!d || !(Number(d.price) > 0)) return;
+        h.salePrice = round2(Number(d.price));
+        h.fees = Math.max(0, round2(h.salePrice - Number(d.netAtPrice)));
+        h.priceInfo = {
+          net: round2(Number(d.netAtPrice)),
+          cheapestComp: d.anchor,
+          undercut: Number(d.undercutFromAnchor),
+          anchorSource: d.anchorSource,
+          floorHit: !!d.floorHit,
+        };
+        recompute();
+      } catch (e) { /* keep the fallback price */ }
+    }
+
+    // One-line reason for the recommended eBay price, shown under the draft's price.
+    function priceNote(h) {
+      var pi = h && h.priceInfo;
+      if (!pi) return "";
+      if (
+        pi.anchorSource === "comp" && pi.cheapestComp != null && !pi.floorHit &&
+        pi.undercut > 0
+      ) {
+        return "undercuts market (~" + usd(pi.cheapestComp) + ") · nets " +
+          usd(pi.net) + " after eBay fees";
+      }
+      return "priced to move · nets " + usd(pi.net) + " after eBay fees";
+    }
+
+    var cursor = $("cursor"), ring = $("ring");
+    function moveTo(el, fast) {
+      var r = el.getBoundingClientRect();
+      cursor.classList.toggle("fast", !!fast);
+      cursor.style.transform = "translate(" + (r.left + r.width / 2 - 3) + "px," +
+        (r.top + r.height / 2 - 2) + "px)";
+    }
+    function clickAt() {
+      var m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(
+        cursor.style.transform || "",
+      );
+      var x = m ? +m[1] + 3 : 0, y = m ? +m[2] + 2 : 0;
+      ring.style.left = x + "px";
+      ring.style.top = y + "px";
+      ring.classList.remove("go");
+      void ring.offsetWidth;
+      ring.classList.add("go");
+    }
+    async function clickEl(el, fast) {
+      moveTo(el, fast);
+      await sleep(fast ? 480 : 740);
+      clickAt();
+      await sleep(180);
+    }
+
+    function animateCount(el, from, to, ms, fmt) {
+      fmt = fmt || usd;
+      var start = null;
+      return new Promise(function (res) {
+        function tick(t) {
+          if (start === null) start = t;
+          var p = Math.min(1, (t - start) / ms), e = 1 - Math.pow(1 - p, 3);
+          el.textContent = fmt(from + (to - from) * e);
+          if (p < 1) requestAnimationFrame(tick);
+          else res();
+        }
+        requestAnimationFrame(tick);
+      });
+    }
+
+    var orderListEl = $("orderlist"), kioskEl = $("kiosk"), tallyEl = $("tally");
+
+    // Tile content: emoji-on-color always present; a real product photo overlays
+    // it when the item has an image, and reveals the emoji again if it fails to load.
+    function media(it) {
+      var ph = '<span class="ph">' + esc(it.emoji || "📦") + "</span>";
+      if (!it.image) return ph;
+      return ph +
+        '<img class="pimg" src="' + esc(it.image) + '" alt="" loading="lazy" ' +
+        'referrerpolicy="no-referrer" onerror="this.remove()">';
+    }
+
+    function buildOrderList() {
+      orderListEl.innerHTML = "";
+      ITEMS.forEach(function (it, i) {
+        var tile = TILE[i % TILE.length];
+        var row = document.createElement("div");
+        row.className = "order";
+        row.dataset.i = i;
+        row.innerHTML = '<div class="thumb" style="background:' + tile + '">' +
+          media(it) + "</div>" +
+          '<div class="meta"><div class="nm">' + esc(it.name) +
+          '</div><div class="br">' + esc(it.brand) + " · TikTok Shop</div></div>" +
+          '<div class="vals"><div class="paid">paid $0.00</div><div class="retail">' +
+          usd(it.retail) + "</div></div>" +
+          '<div class="check">✓</div>';
+        orderListEl.appendChild(row);
+      });
+    }
+
+    function buildKiosk() {
+      kioskEl.innerHTML = '<div class="grid" id="grid"></div>';
+      var grid = $("grid");
+      ITEMS.forEach(function (it, i) {
+        var tile = TILE[i % TILE.length];
+        var c = document.createElement("div");
+        c.className = "kcard" + (it.hero ? " hero" : "");
+        c.dataset.i = i;
+        c.innerHTML = '<div class="img" style="background:' + tile + '">' +
+          media(it) +
+          '<span class="sbadge available">● Available</span>' +
+          '<button class="draftbtn">eBay draft</button></div>' +
+          '<div class="body"><div class="nm">' + esc(it.name) +
+          '</div><div class="br">' + esc(it.brand) + "</div>" +
+          '<div class="pr">' + usd(it.retail) + "</div></div>";
+        grid.appendChild(c);
+      });
+    }
+
+    // ---------- phases ----------
+    async function phaseOrderList() {
+      buildOrderList();
+      var rows = orderListEl.querySelectorAll(".order");
+      $("ol-count").textContent = "· " + ITEMS.length + " items";
+      for (var i = 0; i < rows.length; i++) {
+        rows[i].classList.add("in");
+        await sleep(120);
+      }
+      await sleep(400);
+      var running = 0;
+      for (var j = 0; j < rows.length; j++) {
+        await clickEl(rows[j], j > 0);
+        rows[j].classList.add("clicked");
+        var from = running;
+        running += ITEMS[j].retail;
+        await animateCount(tallyEl, from, running, 420);
+        await sleep(120);
+      }
+      tallyEl.textContent = usd(SAMPLE_VALUE);
+      await sleep(500);
+    }
+
+    async function phaseKioskRefresh() {
+      $("kiosk-sub").textContent = "refreshing…";
+      buildKiosk();
+      $("kiosk-sub").textContent = ITEMS.length + " of " + ITEMS.length +
+        " samples";
+      var cards = kioskEl.querySelectorAll(".kcard");
+      for (var i = 0; i < cards.length; i++) {
+        cards[i].classList.add("in");
+        await sleep(110);
+      }
+      await sleep(700);
+    }
+
+    function heroCard() {
+      return kioskEl.querySelector(".kcard.hero");
+    }
+
+    async function phaseClearToSell() {
+      var card = heroCard();
+      card.classList.add("focus");
+      var badge = card.querySelector(".sbadge");
+      await clickEl(badge);
+      badge.classList.remove("available");
+      badge.classList.add("cleared");
+      badge.innerHTML = "🌱 Cleared to Sell";
+      card.classList.add("cleared"); // reveals the eBay draft button
+      await sleep(900);
+    }
+
+    async function phaseEbayDraft() {
+      var card = heroCard();
+      await clickEl(card.querySelector(".draftbtn"));
+      $("ebd").innerHTML =
+        '<div class="ebd-top"><span class="ebd-logo"><span class="e">e</span><span class="b">b</span><span class="a">a</span><span class="y">y</span></span>' +
+        '<span class="ebd-h">Create your listing</span><span class="ebd-x">✕</span></div>' +
+        '<div class="ebd-banner">✎ Draft from sample "' + esc(hero.name) +
+        '" — tap a field to autofill, or open it in eBay.</div>' +
+        '<div class="ebd-body">' +
+        '<div class="ebd-fld"><label>Photos</label><div class="ebd-box" id="f0"><span class="ebd-ph" style="background:' +
+        TILE[0] + '">' + media(hero) +
+        '</span></div><span class="ebd-chip">☝ autofill photo</span></div>' +
+        '<div class="ebd-fld"><label>Listing title</label><div class="ebd-box" id="f1">' +
+        esc(hero.name) +
+        '</div><span class="ebd-chip">☝ autofill title</span></div>' +
+        '<div class="ebd-row"><div class="ebd-fld"><label>Condition</label><div class="ebd-box" id="f2"><span class="ebd-pill">New</span></div><span class="ebd-chip">☝ autofill</span></div>' +
+        '<div class="ebd-fld"><label>Price · Buy It Now</label><div class="ebd-box" id="f3">' +
+        usd(hero.salePrice) + "</div>" +
+        (hero.priceInfo
+          ? '<div class="ebd-rec">🏷 ' + esc(priceNote(hero)) + "</div>"
+          : "") +
+        '<span class="ebd-chip">☝ autofill price</span></div></div>' +
+        '<div class="ebd-fld"><label>Description</label><div class="ebd-box" id="f4" style="color:#444;line-height:1.55">Brand-new, sealed TikTok Shop sample. Ships same-day from a smoke-free home. See item specifics for details.</div><span class="ebd-chip">☝ autofill description</span></div>' +
+        "</div>" +
+        '<div class="ebd-foot"><span class="ebd-meta">1 photo · ' +
+        usd(hero.salePrice) + " · productId " +
+        esc(hero.productId || "1731301163454206492") + "</span>" +
+        '<button class="ebd-open" id="ebd-open">Open in eBay &amp; autofill ↗</button></div>';
+      $("ebay-ov").classList.add("show");
+      await sleep(500);
+      for (var k = 0; k < 5; k++) {
+        var box = $("f" + k);
+        await clickEl(box, true);
+        box.classList.add("flash");
+        await sleep(260);
+        box.classList.remove("flash");
+      }
+      var open = $("ebd-open");
+      await clickEl(open);
+      open.classList.add("flash");
+      open.textContent = "Listing on eBay… ↗";
+      await sleep(900);
+      $("ebay-ov").classList.remove("show");
+      await sleep(700); // short pause
+    }
+
+    async function phaseMarkSold() {
+      var card = heroCard();
+      await clickEl(card.querySelector(".sbadge"));
+      $("sold-nm").textContent = hero.name;
+      $("sold-br").textContent = hero.brand;
+      $("sold-price").textContent = usd(hero.salePrice);
+      $("sold-ov").classList.add("show");
+      await sleep(700);
+      await clickEl($("sold-btn"));
+      $("sold-ov").classList.remove("show");
+      var badge = card.querySelector(".sbadge");
+      badge.classList.remove("cleared");
+      badge.classList.add("sold");
+      badge.innerHTML = "● Sold";
+      card.querySelector(".pr").innerHTML =
+        '<span style="text-decoration:line-through;color:#6b768c">' +
+        usd(hero.retail) + '</span> &nbsp;<span class="sold">Sold ' +
+        usd(hero.salePrice) + " · eBay</span>";
+      card.classList.remove("focus");
+      await sleep(900); // one last short pause
+    }
+
+    async function phaseShowcase() {
+      $("showcase").classList.add("show");
+      await sleep(500);
+      $("lot-value").classList.add("in");
+      await animateCount($("lot-value-amt"), 0, SAMPLE_VALUE, 700, usd);
+      await sleep(500);
+      $("lot-profit").classList.add("in");
+      await animateCount($("lot-profit-amt"), 0, PROFIT, 700, function (v) {
+        return "+" + usd(v);
+      });
+      await sleep(600);
+      $("sc-final").classList.add("in");
+      await animateCount($("sc-final-amt"), 0, TOTAL, 900, usd);
+      await sleep(300);
+      $("replay").classList.add("show");
+    }
+
+    async function run() {
+      $("showcase").classList.remove("show");
+      $("ebay-ov").classList.remove("show");
+      $("sold-ov").classList.remove("show");
+      $("replay").classList.remove("show");
+      ["lot-value", "lot-profit", "sc-final"].forEach(function (id) {
+        $(id).classList.remove("in");
+      });
+      $("lot-value-amt").textContent = "$0";
+      $("lot-profit-amt").textContent = "$0";
+      $("sc-final-amt").textContent = "$0";
+      tallyEl.textContent = "$0.00";
+      kioskEl.innerHTML =
+        '<div class="kiosk-loading"><div class="spinner"></div><div>Loading Inventory Manager…</div></div>';
+      $("kiosk-sub").textContent = "loading…";
+      // Recommend the eBay Buy-It-Now price with the real formula before the draft
+      // shows it (invisible under the loading spinner; falls back if offline).
+      await priceHero(hero);
+      moveTo($("creator"));
+      await sleep(400);
+      await phaseOrderList();
+      await phaseKioskRefresh();
+      await phaseClearToSell();
+      await phaseEbayDraft();
+      await phaseMarkSold();
+      await phaseShowcase();
+    }
+
+    $("replay").addEventListener("click", run);
+
+    // ---- "Recreate with Claude" info modal ----
+    var demoCreator = "@sample_squad";
+    function buildPrompt() {
+      var c = demoCreator;
+      var h = hero || {};
+      var hName = h.name || "Ninja AF101 Air Fryer 4qt";
+      var hId = h.productId || "1731301163454206492";
+      var hSale = usd(h.salePrice || 72.00);
+      return [
+        "Walk a TikTok Shop sample through its full resale lifecycle using my LP-OS skills, and show me the money at each step:",
+        "",
+        "1. Import + assign — use the samples-import flow to add these TikTok Shop product IDs to inventory, assigned to creator " +
+        c + ":",
+        "   " + hId,
+        "   (replace with your own order_list product IDs)",
+        "",
+        '2. Cleared to Sell — use the sample-lifecycle skill to set the "' + hName +
+        "\" sample's status to cleared_to_sell.",
+        "",
+        "3. List on eBay — use list_on_marketplace to draft an eBay listing for it at the recommended price " +
+        hSale +
+        " (from the eBay pricing formula — undercuts the market, protected by a fee-aware floor), then use the ebay-listing browser skill to open eBay's create-listing page pre-filled (do not publish).",
+        "",
+        "4. Mark sold — use the sample-lifecycle skill to mark it sold on eBay for " +
+        hSale + ", attributing the resale revenue to " + c + ".",
+        "",
+        "5. Show the payoff — use graylog-query to report " + c +
+        "'s resale revenue (gmv + net) next to the free-sample retail value, so I can see the total value created.",
+      ].join("\n");
+    }
+    function hideHowto() {
+      $("howto-ov").classList.remove("show");
+    }
+    $("infobtn").addEventListener("click", function () {
+      $("howto-ov").classList.add("show");
+    });
+    $("howto-close").addEventListener("click", hideHowto);
+    $("howto-ov").addEventListener("click", function (e) {
+      if (e.target === $("howto-ov")) hideHowto();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") hideHowto();
+    });
+    function fallbackCopy(text) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand("copy");
+      } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    $("copybtn").addEventListener("click", function () {
+      var text = buildPrompt();
+      var note = $("copynote");
+      var done = function () {
+        note.classList.add("show");
+        setTimeout(function () {
+          note.classList.remove("show");
+        }, 2400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {
+          fallbackCopy(text);
+          done();
+        });
+      } else {
+        fallbackCopy(text);
+        done();
+      }
+    });
+
+    // Load real samples (catalog images + creator) then play the demo. loadItems
+    // sets the creator label and swaps in real products; it degrades to the
+    // curated emoji batch on any failure, so the demo always runs.
+    loadItems().then(run);
+    </script>
+  </body>
+</html>

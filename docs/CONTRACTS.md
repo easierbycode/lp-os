@@ -25,15 +25,24 @@ lp-os/
   docs/
 ```
 
-`apps/member` is npm/Vite-driven (mirroring tiktok-sample-tracker). It is listed
-in the root `workspace` array only because Deno refuses to run against a nested
-`deno.json` that isn't a member — but npm owns its `node_modules` (run `npm ci`
-there, not `deno install`) and it is excluded from root fmt/lint. Its
-`deno.json` import map carries the `node:` builtins plus the bare npm specifiers
-the generated `.deno-deploy` server imports (needed by `deno desktop`; see
-`docs/DISTRIBUTION.md`). Cross-package Deno imports use the workspace names
-`@lp-os/db`, `@lp-os/relay`, `@lp-os/graylog`, `@lp-os/lifecycle` (already
-pinned in each package's `deno.json`).
+`apps/member` is npm/Vite-driven (mirroring tiktok-sample-tracker) and is NOT a
+member of the root `workspace` array — Deno warns and ignores the parent config
+when running there. npm owns its `node_modules` locally (`npm ci`; the Deploy
+builder may use `deno install --allow-scripts` there instead) and it is
+excluded from root fmt/lint. It builds with `kit.paths.base = "/member"` into
+`apps/member/.deno-deploy` (post-processed by `scripts/patch-deploy.mjs`, which
+fails the build loudly if the adapter output changes shape); the shell mounts
+the generated handler at `/member`. The built server's bare npm specifiers
+(`@sveltejs/kit`(+`/internal/server`), `clsx`, `cookie`, `devalue`,
+`set-cookie-parser`) resolve through the ROOT `deno.json` import map at
+runtime — those pins are EXACT and must move in lockstep with
+`apps/member/package.json` (Kit's `internal` server API makes build/runtime
+version skew a real hazard). Its own `deno.json` import map carries the same
+pins plus `node:` builtins (needed by `deno desktop`; see
+`docs/DISTRIBUTION.md`). Root task `build:deploy` = member build then shell
+build. Cross-package Deno imports use the workspace names `@lp-os/db`,
+`@lp-os/relay`, `@lp-os/graylog`, `@lp-os/lifecycle` (already pinned in each
+package's `deno.json`).
 
 ## Environment variables (the complete set)
 
@@ -45,13 +54,23 @@ pinned in each package's `deno.json`).
 - `SCAN_RELAY_ORIGINS` — comma-separated extra allowed WS origins; localhost
   always allowed.
 - `SCAN_RELAY_TOKEN` — optional WS token fallback (`?scanToken=`).
-- `MEMBER_APP_URL` — where apps/member is served (default
-  `http://localhost:8080`); used by the shell FOLDERS config (Member/App).
+- `MEMBER_APP_URL` — optional override for where apps/member is served:
+  an absolute URL (split deploy) or a "/"-prefixed same-origin path. Default:
+  same-origin `/member`, served by the shell from `apps/member/.deno-deploy`;
+  falls back to `http://localhost:8080/member` when the member build is absent
+  (`deno task dev:member`). Used by the shell FOLDERS config (Member/App).
 - `MEMBER_WEB_URL` — the Member/Web window's URL, a separate deployment from
   Member/App (default `https://data-pimp.easierbycode.deno.net/member`).
 - `SCANNER_APP_URL`, `INVENTORY_APP_URL` — external app URLs for shell FOLDERS
   entries (defaults: current production URLs, e.g. `https://admin.thirsty.store`
   for inventory).
+- `EXTERNAL_API_<NAME>` (`SCRAPECREATORS` / `EBAY` / `BARCODELOOKUP`) —
+  `on|off` kill switches for outbound third-party APIs, layered above
+  key/credential gating (off wins even with a key set; disabled routes return
+  503 `{ok:false, error:"<name> disabled"}`). Defaults live in
+  `apps/shell/core/external-apis.ts`; `barcodelookup` defaults **off** (its
+  key expired 2026-07; the provider is pre-registered for the UPC-lookup
+  pipeline). `/health` and `/api/health` expose the states.
 
 ## Database (packages/db → `@lp-os/db`)
 
@@ -513,8 +532,9 @@ Seven skills: `ebay-listing`, `sample-e2e`, `sample-lifecycle`,
 
 - URL updates: `https://thirsty.store` →
   `${LPOS_API_URL:-http://localhost:8000}`; `https://admin.thirsty.store` stays
-  for now (tracker not yet migrated); note in each SKILL.md that LP-OS's
-  production domain is TBD.
+  for now (tracker not yet migrated); each SKILL.md names
+  `https://thirsty.store` as LP-OS's production domain (decided at the
+  2026-07 changeover — LP-OS replaced data-pimp behind it).
 - `graylog-query` rewrite: same triggers/purpose; script becomes
   `scripts/graylog_query.ts` (Deno) that (a) default mode: queries Postgres
   directly via `@lp-os/graylog`'s parser + `DATABASE_URL`, (b) `--url` mode:

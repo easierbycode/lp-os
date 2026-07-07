@@ -69,8 +69,8 @@ to that URL. (Without `autostart=1` it just prefills, so the user clicks Start.)
 
 ## Guardrails
 
-- Runs against `LPOS_API_URL` (default `http://localhost:8000`; LP-OS's
-  production domain is TBD). Wherever it points, it creates **real** sample rows
+- Runs against `LPOS_API_URL` (default `http://localhost:8000`; production is
+  `https://thirsty.store`). Wherever it points, it creates **real** sample rows
   — clean up after CI-style runs and use an obvious test `creator` (e.g.
   `@e2e-test`).
 - Graylog is append-only: order-scrape test events persist (clearly tagged).

@@ -25,11 +25,10 @@ Key URLs:
 - Samples-Import page: `https://easierbycode.com/tok-scrape/samples-import/www/`
   (also an LP-OS app: **Demos → Samples-Import**)
 - Extension install help: `${LPOS_API_URL:-http://localhost:8000}/install` (also
-  **Apps → Install Extension** in LP-OS) — has the load-unpacked steps. (LP-OS's
-  production domain is TBD; until it exists, set `LPOS_API_URL` for a deployed
-  target.)
-- Extension source: the `extension/` folder of the lp-os repo checkout. **No
-  zip is published for the merged extension yet.** The legacy
+  **Apps → Install Extension** in LP-OS) — has the load-unpacked steps.
+  (Production is `https://thirsty.store`; set `LPOS_API_URL` to target it.)
+- Extension source: the `extension/` folder of the lp-os repo checkout, or the
+  zip the shell serves at `/extension.zip` (linked from `/install`). The legacy
   `https://easierbycode.com/tok-scrape/chrome.zip` is the OLD tok-scrape
   extension — it posts GELF to the retired graylog-shim (scrapes never reach
   LP-OS) and has no role gate. Don't offer it for LP-OS use.
