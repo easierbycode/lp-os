@@ -40,6 +40,12 @@ import {
 } from "@lp-os/marketplace";
 import { DEFAULT_USER_ID, rbacClientConfig } from "./core/roles.ts";
 import { createProductAnalysis } from "./core/product-analysis.ts";
+import { createSampleImage } from "./core/sample-image.ts";
+import {
+  ExternalApiDisabledError,
+  externalApiEnabled,
+  externalApiStates,
+} from "./core/external-apis.ts";
 
 /* ------------------------------------------------------------------ env -- */
 
@@ -196,6 +202,16 @@ function publicHttpBaseUrl(value: string | undefined): string {
   }
 }
 
+// MEMBER_APP_URL: absolute URL (split deploy) or "/"-prefixed same-origin
+// path. Default: the mounted /member handler; standalone-dev fallback moves
+// to http://localhost:8080/member (kit.paths.base applies in dev too).
+function memberBaseValue(value: string | undefined): string {
+  const raw = (value || "").trim();
+  if (raw.startsWith("/")) return raw.replace(/\/+$/, "") || "/member";
+  return publicHttpBaseUrl(raw) ||
+    (memberHandler ? "/member" : "http://localhost:8080/member");
+}
+
 /* ------------------------------------------------------------- OS shell -- */
 
 // globalThis.LPOS_OS_CONFIG — keys read by static/os.js. scanRelay stays ""
@@ -203,8 +219,7 @@ function publicHttpBaseUrl(value: string | undefined): string {
 function osClientConfig(): Record<string, string> {
   return {
     scanRelay: "",
-    memberAppUrl: publicHttpBaseUrl(envValue("MEMBER_APP_URL")) ||
-      "http://localhost:8080",
+    memberAppUrl: memberBaseValue(envValue("MEMBER_APP_URL")),
     scannerAppUrl: publicHttpBaseUrl(envValue("SCANNER_APP_URL")),
     inventoryAppUrl: publicHttpBaseUrl(envValue("INVENTORY_APP_URL")) ||
       "https://admin.thirsty.store",
@@ -449,6 +464,57 @@ app.get("/scan-client.js", async () => {
   });
 });
 
+/* ----------------------------------------------------------- member app -- */
+// apps/member builds (deno task --cwd apps/member build, or root build:deploy)
+// into apps/member/.deno-deploy with kit.paths.base = "/member". The adapter
+// handler is a plain Deno.ServeHandler; the built SvelteKit server strips the
+// /member base itself, so requests pass through UNSTRIPPED. Computed-URL
+// dynamic import so `deno check` never follows it and dev boots fine without
+// the build (503 on /member instead). Runtime bare specifiers
+// (@sveltejs/kit/internal/server, clsx, cookie, devalue, set-cookie-parser)
+// resolve via the ROOT deno.json import map — exact pins, keep in lockstep
+// with apps/member/package.json.
+const MEMBER_DD = new URL("../member/.deno-deploy/", import.meta.url);
+
+type MemberHandler = (
+  req: Request,
+  info: Deno.ServeHandlerInfo,
+) => Response | Promise<Response>;
+
+async function loadMemberHandler(): Promise<MemberHandler | null> {
+  try {
+    const [{ prepareServer }, deployConfig, svelteData] = await Promise.all([
+      import(new URL("handler.ts", MEMBER_DD).href),
+      Deno.readTextFile(new URL("deploy.json", MEMBER_DD)).then(JSON.parse),
+      Deno.readTextFile(new URL("svelte.json", MEMBER_DD)).then(JSON.parse),
+    ]);
+    // 3rd arg: the root deploy.json's relative ".deno-deploy/..." destinations
+    // resolve against — must be apps/member, NOT Deno.cwd().
+    return prepareServer(
+      svelteData,
+      deployConfig,
+      fromFileUrl(new URL("../member/", import.meta.url)),
+    );
+  } catch (error) {
+    console.warn(
+      `[lp-os] member app not mounted (${errorMessage(error)}); ` +
+        "set MEMBER_APP_URL or run: deno task --cwd apps/member build",
+    );
+    return null;
+  }
+}
+
+const memberHandler = await loadMemberHandler();
+
+const memberRoute = async (
+  ctx: { req: Request; info: Deno.ServeHandlerInfo },
+) =>
+  memberHandler
+    ? await memberHandler(ctx.req, ctx.info)
+    : json({ error: "member app not built" }, 503);
+app.all("/member", memberRoute); // "/member/*" alone doesn't match the bare path
+app.all("/member/*", memberRoute);
+
 /* ------------------------------------------------- relay + kiosk fleet -- */
 
 app.get("/api/scan-socket", (ctx) => relay().handleUpgrade(ctx.req));
@@ -514,12 +580,16 @@ app.all("/api/system/sessions", (ctx) => handleSessionsStub(ctx.req));
 app.all("/api/views", (ctx) => handleViewsStub(ctx.req));
 
 app.get("/health", async () => {
-  if (!store) return json({ ok: true, db: false, newestStoredMs: null });
+  const externalApis = externalApiStates(envValue);
+  if (!store) {
+    return json({ ok: true, db: false, newestStoredMs: null, externalApis });
+  }
   try {
     return json({
       ok: true,
       db: true,
       newestStoredMs: await store.newestTimestampMs(),
+      externalApis,
     });
   } catch (error) {
     return json({ ok: false, db: true, error: errorMessage(error) }, 500);
@@ -972,6 +1042,14 @@ function marketplaceParam(params: Record<string, string>): string {
 }
 
 app.all("/api/listings", async (ctx) => {
+  // The eBay kill switch outranks DB state — "we turned it off" must not be
+  // masked by "DATABASE_URL not configured". GET stays available: reading the
+  // listings table is a DB read, not an eBay call.
+  if (
+    ctx.req.method === "POST" && !externalApiEnabled(envValue, "ebay")
+  ) {
+    return json({ ok: false, error: "ebay disabled" }, 503);
+  }
   if (!hasDb) return dbUnavailable();
   if (ctx.req.method === "GET") {
     try {
@@ -1007,6 +1085,9 @@ app.all("/api/listings/run-due", async (ctx) => {
   if (ctx.req.method !== "POST") {
     return json({ ok: false, error: "Method not allowed" }, 405);
   }
+  if (!externalApiEnabled(envValue, "ebay")) {
+    return json({ ok: false, error: "ebay disabled" }, 503);
+  }
   if (!listingService) return dbUnavailable();
   try {
     return json(await listingService.runAutoListPass());
@@ -1033,6 +1114,9 @@ app.all("/api/marketplaces", async (ctx) => {
 app.all("/api/marketplaces/:marketplace/verify", async (ctx) => {
   if (ctx.req.method !== "POST") {
     return json({ ok: false, error: "Method not allowed" }, 405);
+  }
+  if (!externalApiEnabled(envValue, "ebay")) {
+    return json({ ok: false, detail: "ebay disabled" }, 503);
   }
   if (!listingService) return dbUnavailable();
   const marketplace = marketplaceParam(ctx.params);
@@ -1140,6 +1224,7 @@ app.get("/api/health", () =>
     ok: true,
     graylogConfigured: Boolean(store),
     scrapeCreatorsConfigured: productAnalysis.scrapeCreatorsConfigured(),
+    externalApis: externalApiStates(envValue),
   }));
 
 app.get("/api/product/:id", async (ctx) => {
@@ -1199,6 +1284,12 @@ app.all("/api/unpriced-samples/:id/fetch-price", async (ctx) => {
       ),
     );
   } catch (error) {
+    // Operator kill switch (EXTERNAL_API_SCRAPECREATORS=off) → 503, distinct
+    // from a real upstream failure so "we turned it off" and "ScrapeCreators
+    // is down" stay distinguishable.
+    if (error instanceof ExternalApiDisabledError) {
+      return json({ ok: false, error: error.message }, 503);
+    }
     // A ScrapeCreators miss/outage, a missing API key, or a product missing
     // from Graylog surfaces as a clean 502 {ok:false, error} — never a raw 500
     // stack trace — so the row simply stays unpriced (data-pimp convention).
@@ -1209,6 +1300,39 @@ app.all("/api/unpriced-samples/:id/fetch-price", async (ctx) => {
 app.get("/api/comparison", async () => {
   try {
     return json(await productAnalysis.fetchComparisonWithEdits());
+  } catch (error) {
+    return json({ error: errorMessage(error) }, 500);
+  }
+});
+
+/* ------------------------------------------------------------------ kiosk -- */
+// The Inventory Manager kiosk, rebuilt vanilla from data-pimp's React SPA
+// (static/kiosk.html + kiosk.js). Routing is client-side, so the bare path
+// and every subpath serve the same shell. /kiosk/checkout?code= deep links
+// are wire contract with os.js routeScanToKiosk and the scan relay.
+
+const sampleImage = createSampleImage({ db, env: envValue });
+
+app.get("/kiosk", async (ctx) => {
+  const res = await serveStatic("/kiosk.html", ctx.req.method);
+  return res ?? json({ error: "kiosk page missing" }, 500);
+});
+app.get("/kiosk/*", async (ctx) => {
+  const res = await serveStatic("/kiosk.html", ctx.req.method);
+  return res ?? json({ error: "kiosk page missing" }, 500);
+});
+
+// Resolve (and backfill) a sample's product image via ScrapeCreators.
+// data-pimp contract: 200 {id, picture_url} with picture_url null on a miss.
+app.all("/api/samples/:id/image", async (ctx) => {
+  if (ctx.req.method !== "GET") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+  if (!hasDb) return dbUnavailable();
+  try {
+    const id = ctx.params.id;
+    const resolved = await sampleImage.resolve({ sampleId: id });
+    return json({ id, picture_url: resolved?.url ?? null });
   } catch (error) {
     return json({ error: errorMessage(error) }, 500);
   }
@@ -1228,7 +1352,7 @@ if (import.meta.main) {
       "[lp-os] DATABASE_URL not set — DB-backed APIs will return 503",
     );
   }
-  if (listingService) {
+  if (listingService && externalApiEnabled(envValue, "ebay")) {
     // Automatic listing: fires due auto-list schedules and (where opted in)
     // lists cleared_to_sell samples. In-process interval — no new systems.
     const intervalMs = Number(envValue("AUTO_LIST_INTERVAL_MS") ?? "300000") ||
@@ -1238,6 +1362,8 @@ if (import.meta.main) {
       intervalMs,
       logger: (message) => console.log(`[lp-os] ${message}`),
     });
+  } else if (listingService) {
+    console.log("[lp-os] auto-lister off (EXTERNAL_API_EBAY=off)");
   }
   const port = Number(envValue("PORT") ?? "8000") || 8000;
   await app.listen({ port });

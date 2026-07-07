@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Inventory Management — Thirsty OS</title>
+    <title>Product Analysis — LP-OS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -19,11 +19,6 @@
           <h1>Product Analysis</h1>
         </div>
         <div class="command">
-          <div class="mode-toggle" role="tablist" aria-label="Search or intake">
-            <button id="mode-search" class="active"
-              type="button">Search</button>
-            <button id="mode-intake" type="button">Intake</button>
-          </div>
           <form id="global-search" class="search command-form">
             <input
               id="global-query"
@@ -33,15 +28,6 @@
             >
             <button type="submit">Search</button>
           </form>
-          <form id="sample-intake" class="intake command-form hidden">
-            <input name="barcode" placeholder="Barcode / QR" autocomplete="off">
-            <input name="productId" placeholder="Product ID" autocomplete="off">
-            <input name="location" placeholder="Shelf" autocomplete="off">
-            <button type="submit">Stage Intake</button>
-          </form>
-          <p id="intake-result" class="muted command-hint hidden">
-            Scan a sample to stage it against Graylog product analysis.
-          </p>
         </div>
       </div>
     </header>

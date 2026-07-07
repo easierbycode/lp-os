@@ -2,11 +2,12 @@
 // partner-collabs sellers) and seller side (live, streamer, product,
 // data-overview, analytics, order detail/list).
 //
-// GELF ingest goes to the LP-OS shell's POST /gelf endpoint. The production
-// domain is TBD — the default below is the local dev shell. Per-machine
+// GELF ingest goes to the LP-OS shell's POST /gelf endpoint — production is
+// https://thirsty.store (LP-OS replaced data-pimp behind it). Per-machine
 // overrides come in as globals (LPOS_GELF_ENDPOINT / LPOS_GELF_TOKEN), which
-// background.js pre-injects from chrome.storage.local before this file runs.
-var DEFAULT_GRAYLOG_ENDPOINT = 'http://localhost:8000/gelf';
+// background.js pre-injects from chrome.storage.local before this file runs;
+// point LPOS_GELF_ENDPOINT at http://localhost:8000/gelf for a local shell.
+var DEFAULT_GRAYLOG_ENDPOINT = 'https://thirsty.store/gelf';
 // Legacy graylog-shim write token, kept verbatim from both source extensions
 // so the payload scripts' _graylog_key field keeps passing the ingest gate
 // (LP-OS honors it when GRAYLOG_INGEST_TOKEN is set to the same value).
