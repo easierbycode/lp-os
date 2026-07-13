@@ -292,9 +292,9 @@ function baseAppUrl(value, fallback) {
   return safe ? safe.replace(/\/+$/, "") : "";
 }
 
-const MEMBER_APP_URL = baseAppUrl(OS_CONFIG.memberAppUrl, "/member");
-// Member/Web is its own deployment (data-pimp member dashboard), not a route
-// of MEMBER_APP_URL — the two windows point at independent apps.
+// Member/Web is its own deployment (data-pimp member dashboard), independent
+// of the /member SvelteKit app the shell mounts — Member/App points at the
+// Cordova mobile app, matching the original system.
 const MEMBER_WEB_URL = baseAppUrl(
   OS_CONFIG.memberWebUrl,
   "https://data-pimp.easierbycode.deno.net/member",
@@ -1838,7 +1838,15 @@ globalThis.addEventListener("message", (e) => {
     if (whWin.snapped !== "left") snapWindow(whWin, "left");
     const primary = windows.get(opened[0].winId);
     if (primary && primary.snapped !== "right") snapWindow(primary, "right");
+    // Raise the step's windows above earlier steps' — an already-open window
+    // skips openApp/snapWindow, so nothing else brings it forward. Secondary
+    // windows first, then warehouse, then the primary: the tour's two tiled
+    // panes stay frontmost with the current step's app on top.
+    for (let i = opened.length - 1; i >= 1; i--) {
+      focusWindow(opened[i].winId);
+    }
     focusWindow(whWin.id);
+    focusWindow(opened[0].winId);
     flashStatus(`Warehouse → ${step}`);
   }
 

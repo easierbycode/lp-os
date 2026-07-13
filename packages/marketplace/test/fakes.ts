@@ -11,7 +11,7 @@ import type {
   PublishResult,
   TableApi,
 } from "../types.ts";
-import { MarketplaceError } from "../types.ts";
+import type { MarketplaceError } from "../types.ts";
 
 export class FakeTable implements TableApi {
   rows: Record<string, unknown>[] = [];
