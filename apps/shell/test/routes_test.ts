@@ -108,6 +108,26 @@ Deno.test("GET /api/sample-statuses → vocabulary without DB", async () => {
   assert(Array.isArray(body) && body.length > 0);
 });
 
+// The Inventory companion (admin.thirsty.store) reads these vocab/config
+// endpoints cross-origin, so every response path must carry ACAO — a plain
+// json() (no CORS header) gets blocked by the browser. GET carries it on every
+// path (200/503), and OPTIONS is answered as a 204 preflight.
+Deno.test("vocab/config reads carry CORS on every response path", async () => {
+  for (const path of ["/api/sample-statuses", "/api/creators", "/api/roles"]) {
+    const res = await handler(req(path));
+    assertEquals(
+      res.headers.get("access-control-allow-origin"),
+      "*",
+      `${path} missing access-control-allow-origin`,
+    );
+    await res.body?.cancel();
+  }
+  const pre = await handler(req("/api/creators", { method: "OPTIONS" }));
+  assertEquals(pre.status, 204);
+  assertEquals(pre.headers.get("access-control-allow-origin"), "*");
+  await pre.body?.cancel();
+});
+
 Deno.test("unknown /api/* → JSON 404", async () => {
   const res = await handler(req("/api/nope"));
   assertEquals(res.status, 404);
