@@ -117,6 +117,7 @@ Deno.test("publish walks token → item → offer → publish with exact headers
   assertEquals(result.externalId, "110123");
   assertEquals(result.offerId, "OFF1");
   assertEquals(result.url, "https://sandbox.ebay.com/itm/110123");
+  assertEquals(result.published, true);
 
   const token = calls.find((c) => c.url.includes("/oauth2/token"))!;
   assert(token, "token endpoint called");
@@ -166,6 +167,21 @@ Deno.test("publish walks token → item → offer → publish with exact headers
     paymentPolicyId: "P1",
     returnPolicyId: "R1",
   });
+});
+
+Deno.test("createDraft stops after a complete unpublished offer", async () => {
+  const { fetchImpl, calls } = makeFetch(happyRoutes);
+  const client = createEbayClient({
+    credentials: REFRESH_CREDS,
+    fetchImpl,
+  });
+
+  const result = await client.createDraft(PUBLISH_INPUT);
+  assertEquals(result, { offerId: "OFF1", published: false });
+  assert(
+    !calls.some((call) => call.url.includes("/offer/OFF1/publish")),
+    "draft creation must never publish the offer",
+  );
 });
 
 Deno.test("publish creates the merchant location when missing", async () => {
@@ -224,6 +240,38 @@ Deno.test("publish requires a ship-from postal code when creating the location",
     "postal code",
   );
   assertEquals(error.permanent, true);
+});
+
+Deno.test("publish reuses an existing Seller Hub location key", async () => {
+  const { fetchImpl, calls } = makeFetch((call) => {
+    if (
+      call.method === "GET" &&
+      call.url.includes("/sell/inventory/v1/location/lp-os-default")
+    ) {
+      return { status: 404, body: {} };
+    }
+    if (
+      call.method === "GET" &&
+      call.url.includes("/sell/inventory/v1/location?limit=1")
+    ) {
+      return {
+        status: 200,
+        body: { locations: [{ merchantLocationKey: "seller-hub-main" }] },
+      };
+    }
+    return happyRoutes(call);
+  });
+  const client = createEbayClient({ credentials: REFRESH_CREDS, fetchImpl });
+
+  await client.createDraft(PUBLISH_INPUT);
+
+  const offer = calls.find((call) =>
+    call.method === "POST" && /\/sell\/inventory\/v1\/offer$/.test(call.url)
+  )!;
+  assertEquals(
+    JSON.parse(offer.body ?? "{}").merchantLocationKey,
+    "seller-hub-main",
+  );
 });
 
 Deno.test("publish opts in and creates default policies when none exist", async () => {

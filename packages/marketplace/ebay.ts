@@ -97,7 +97,7 @@ export function createEbayClient(opts: EbayClientOptions): MarketplaceClient {
   const doFetch = opts.fetchImpl ?? fetch;
 
   const marketplaceId = str(settings.marketplaceId) || DEFAULT_MARKETPLACE_ID;
-  const locationKey = str(settings.merchantLocationKey) ||
+  let locationKey = str(settings.merchantLocationKey) ||
     DEFAULT_LOCATION_KEY;
   const condition = str(settings.condition) || DEFAULT_CONDITION;
   // eBay enforces a per-marketplace Content-Language (hyphenated; en_US is
@@ -270,8 +270,26 @@ export function createEbayClient(opts: EbayClientOptions): MarketplaceClient {
     const country = str(loc.country) || "US";
     const postalCode = str(loc.postalCode);
     if (!postalCode) {
+      // Reuse a Seller Hub location when one already exists under a key other
+      // than LP-OS's default. No need to duplicate the seller's address.
+      const locations = await api(
+        "GET",
+        "/sell/inventory/v1/location?limit=1",
+        undefined,
+        [404],
+      );
+      if (isRecord(locations) && Array.isArray(locations.locations)) {
+        for (const entry of locations.locations.filter(isRecord)) {
+          const key = str(entry.merchantLocationKey);
+          if (key) {
+            locationKey = key;
+            locationReady = true;
+            return;
+          }
+        }
+      }
       throw new MarketplaceError(
-        "eBay needs a ship-from location — set the postal code in Marketplace settings",
+        "eBay needs a ship-from location — create one in Seller Hub or set the postal code in Marketplace settings",
         { permanent: true },
       );
     }
@@ -483,7 +501,7 @@ export function createEbayClient(opts: EbayClientOptions): MarketplaceClient {
     return null;
   }
 
-  async function publish(input: PublishInput): Promise<PublishResult> {
+  async function upsertOffer(input: PublishInput): Promise<string> {
     await ensureLocation();
     const policyIds = await ensurePolicies();
 
@@ -547,6 +565,16 @@ export function createEbayClient(opts: EbayClientOptions): MarketplaceClient {
       });
     }
 
+    return offerId;
+  }
+
+  async function createDraft(input: PublishInput): Promise<PublishResult> {
+    const offerId = await upsertOffer(input);
+    return { offerId, published: false };
+  }
+
+  async function publish(input: PublishInput): Promise<PublishResult> {
+    const offerId = await upsertOffer(input);
     const published = await api(
       "POST",
       `/sell/inventory/v1/offer/${offerId}/publish`,
@@ -562,6 +590,7 @@ export function createEbayClient(opts: EbayClientOptions): MarketplaceClient {
       externalId: listingId,
       offerId,
       url: `${base.item}/${listingId}`,
+      published: true,
     };
   }
 
@@ -581,5 +610,5 @@ export function createEbayClient(opts: EbayClientOptions): MarketplaceClient {
     }
   }
 
-  return { verify, publish };
+  return { verify, createDraft, publish };
 }

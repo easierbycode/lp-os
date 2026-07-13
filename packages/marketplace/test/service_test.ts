@@ -66,6 +66,34 @@ Deno.test("listSample publishes and records the listed event", async () => {
   assertMatch(result.message, /Listed .+ on ebay/);
 });
 
+Deno.test("listSample creates a ready, unpublished offer when publish is false", async () => {
+  const { deps, Samples, Listings, lifecycle, client, store } = makeServiceDeps(
+    [
+      makeAccount(),
+    ],
+  );
+  const sample = seedSample(Samples);
+  const service = createListingService(deps);
+
+  const result = await service.listSample({
+    sampleId: sample.id as number,
+    creator: "@boosteddealsdaily",
+    askPrice: 40,
+    publish: false,
+  });
+
+  assert(result.ok, result.message);
+  assertEquals(result.listingUrl, null);
+  assertEquals(result.externalId, null);
+  assertEquals(Listings.rows[0].status, "draft");
+  assertEquals(Listings.rows[0].offer_id, "offer-1");
+  assertEquals(Listings.rows[0].listed_at, null);
+  assertEquals(lifecycle.listingCalls.length, 0);
+  assertEquals(store.eventsWithField("listing_draft_json").length, 1);
+  assertMatch(result.message, /ready to publish \(not live\)/);
+  assertEquals(client.publishCalls.length, 1);
+});
+
 Deno.test("listSample refuses when the marketplace is not connected", async () => {
   const { deps, Samples } = makeServiceDeps([]); // no accounts at all
   const sample = seedSample(Samples);

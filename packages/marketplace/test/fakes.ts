@@ -133,6 +133,7 @@ export class FakeClient implements MarketplaceClient {
     externalId: "110001",
     offerId: "offer-1",
     url: "https://sandbox.ebay.com/itm/110001",
+    published: true,
   }];
   verifyResult = { ok: true, detail: "fake client OK" };
 
@@ -143,6 +144,20 @@ export class FakeClient implements MarketplaceClient {
       : this.publishPlan[0];
     if (step instanceof Error) return Promise.reject(step);
     return Promise.resolve(step);
+  }
+
+  createDraft(input: PublishInput): Promise<PublishResult> {
+    this.publishCalls.push(input);
+    const step = this.publishPlan.length > 1
+      ? this.publishPlan.shift()!
+      : this.publishPlan[0];
+    if (step instanceof Error) return Promise.reject(step);
+    return Promise.resolve({
+      ...step,
+      externalId: undefined,
+      url: undefined,
+      published: false,
+    });
   }
 
   verify(): Promise<{ ok: boolean; detail: string }> {

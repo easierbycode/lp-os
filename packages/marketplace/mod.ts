@@ -299,12 +299,15 @@ export function createListingService(deps: ListingServiceDeps): ListingService {
       "-created_at",
       25,
     );
-    const live = existing.find((l) => str(l.status) === "listed");
-    if (live && !input.force) {
-      const url = str(live.listing_url) || null;
+    const active = existing.find((l) =>
+      str(l.status) === "listed" || str(l.status) === "draft"
+    );
+    if (active && !input.force) {
+      const url = str(active.listing_url) || null;
+      const isDraft = str(active.status) === "draft";
       return {
         ok: false,
-        listing: live,
+        listing: active,
         sampleId,
         productId,
         name,
@@ -312,23 +315,31 @@ export function createListingService(deps: ListingServiceDeps): ListingService {
         askPrice,
         creator,
         listingUrl: url,
-        externalId: str(live.external_id) || null,
-        error: `already listed on ${marketplace}${
-          url ? ` (${url})` : ""
-        } — pass force to list again`,
+        externalId: str(active.external_id) || null,
+        error: isDraft
+          ? `already has a ready eBay draft offer (${
+            str(active.offer_id)
+          }) — pass force to create another`
+          : `already listed on ${marketplace}${
+            url ? ` (${url})` : ""
+          } — pass force to list again`,
         permanent: true,
         alreadyListed: true,
         graylog: false,
-        message: `${name ?? "sample"} is already listed on ${marketplace}${
-          url ? `: ${url}` : ""
-        }.`,
+        message: isDraft
+          ? `${name ?? "sample"} already has eBay draft offer ${
+            str(active.offer_id)
+          } ready to publish.`
+          : `${name ?? "sample"} is already listed on ${marketplace}${
+            url ? `: ${url}` : ""
+          }.`,
       };
     }
 
     // force = deliberately list ANOTHER unit while one is already live. The
     // SKU must differ — reusing lpos-<id> would collide with the live offer
     // (eBay allows one offer per sku+marketplace) and mutate it.
-    const sku = live && input.force
+    const sku = active && input.force
       ? `lpos-${sampleId}-${existing.length + 1}`
       : `lpos-${sampleId}`;
     const now = new Date().toISOString();
@@ -366,7 +377,9 @@ export function createListingService(deps: ListingServiceDeps): ListingService {
 
     let published: PublishResult;
     try {
-      published = await clientFor(account).publish({
+      const client = clientFor(account);
+      const publishNow = input.publish !== false;
+      const offerInput = {
         sku,
         title,
         description,
@@ -375,7 +388,10 @@ export function createListingService(deps: ListingServiceDeps): ListingService {
         quantity,
         imageUrl,
         brand,
-      });
+      };
+      published = await (publishNow
+        ? client.publish(offerInput)
+        : client.createDraft(offerInput));
     } catch (error) {
       const permanent = error instanceof MarketplaceError
         ? error.permanent
@@ -444,46 +460,76 @@ export function createListingService(deps: ListingServiceDeps): ListingService {
       };
     }
 
-    // The listing is LIVE from here on — persistence problems must never be
-    // reported as a failed listing (that would invite a re-list → duplicate).
+    // The marketplace offer exists from here on. Persistence problems must
+    // never be reported as a failed offer (that would invite a duplicate).
     let persistWarning = "";
     const listedAt = new Date().toISOString();
+    const isPublished = published.published !== false;
     try {
       listing = (await deps.db.Listings.update(String(listingId), {
-        status: "listed",
-        offer_id: published.offerId ?? null,
-        external_id: published.externalId,
-        listing_url: published.url,
-        listed_at: listedAt,
+        status: isPublished ? "listed" : "draft",
+        offer_id: published.offerId,
+        external_id: published.externalId ?? null,
+        listing_url: published.url ?? null,
+        listed_at: isPublished ? listedAt : null,
         error: null,
         updated_at: listedAt,
       })) ?? listing;
     } catch (error) {
-      persistWarning =
-        ` WARNING: the eBay listing IS live at ${published.url} but the listings row update failed (${
-          errorMessage(error)
-        }) — fix the row manually.`;
+      persistWarning = ` WARNING: eBay offer ${published.offerId}${
+        isPublished ? ` is live at ${published.url}` : " exists as a draft"
+      } but the listings row update failed (${
+        errorMessage(error)
+      }) — fix the row manually.`;
     }
 
-    // The same "listed" analytics event the skills already query, extended
-    // with the row/marketplace ids so status is joinable both ways.
     let graylog = false;
-    try {
-      const recorded = await deps.lifecycle.recordSampleListing({
-        sampleId,
-        creator,
-        marketplace,
-        askPrice,
-        listingUrl: published.url,
-        note: str(input.note) || undefined,
-        operator: str(input.operator) || undefined,
-        source: sourceToken,
-        listingId,
-        externalId: published.externalId,
-      });
-      graylog = recorded.graylog;
-    } catch {
-      graylog = false;
+    if (isPublished) {
+      try {
+        const recorded = await deps.lifecycle.recordSampleListing({
+          sampleId,
+          creator,
+          marketplace,
+          askPrice,
+          listingUrl: published.url,
+          note: str(input.note) || undefined,
+          operator: str(input.operator) || undefined,
+          source: sourceToken,
+          listingId,
+          externalId: published.externalId,
+        });
+        graylog = recorded.graylog;
+      } catch {
+        graylog = false;
+      }
+    } else {
+      graylog = await sendEvent(
+        `thirsty sample listing drafted: ${
+          name ?? productId ?? "sample"
+        } on ${marketplace}`,
+        {
+          listing_draft_json: JSON.stringify({
+            listingId,
+            sampleId,
+            productId,
+            name,
+            creator,
+            marketplace,
+            askPrice,
+            offerId: published.offerId,
+            draftedAt: listedAt,
+          }),
+          creator,
+          marketplace,
+          ask_price_num: askPrice,
+          product_id: productId ?? undefined,
+          sample_id: String(sampleId),
+          listing_id: String(listingId),
+          offer_id: published.offerId,
+          sample_event: "listing_drafted",
+          sample_source: sourceToken,
+        },
+      );
     }
 
     return {
@@ -495,15 +541,23 @@ export function createListingService(deps: ListingServiceDeps): ListingService {
       marketplace,
       askPrice,
       creator,
-      listingUrl: published.url,
-      externalId: published.externalId,
+      listingUrl: published.url ?? null,
+      externalId: published.externalId ?? null,
       error: null,
       graylog,
-      message: `Listed ${name ?? `sample ${sampleId}`} at $${
-        askPrice.toFixed(2)
-      } on ${marketplace} for ${creator}: ${published.url}${
-        graylog ? "" : " WARNING: Graylog listing event was NOT written."
-      }${persistWarning}`,
+      message: isPublished
+        ? `Listed ${name ?? `sample ${sampleId}`} at $${
+          askPrice.toFixed(2)
+        } on ${marketplace} for ${creator}: ${published.url}${
+          graylog ? "" : " WARNING: Graylog listing event was NOT written."
+        }${persistWarning}`
+        : `Created eBay draft offer ${published.offerId} for ${
+          name ?? `sample ${sampleId}`
+        } at $${
+          askPrice.toFixed(2)
+        } for ${creator}; it is complete and ready to publish (not live).${
+          graylog ? "" : " WARNING: Graylog draft event was NOT written."
+        }${persistWarning}`,
     };
   }
 

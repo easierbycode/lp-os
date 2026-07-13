@@ -133,6 +133,17 @@ export interface ProductAnalysisService {
   ): Promise<UnpricedSample>;
   fetchPriceForSample(productId: string): Promise<UnpricedSample>;
   fetchProductWithEdits(productId: string): Promise<ProductAnalysis | null>;
+  lookupProductDetails(
+    productId: string,
+    name?: string,
+  ): Promise<{
+    productId: string;
+    name: string | null;
+    price: number;
+    image: string | null;
+    seller: string | null;
+    sourceUrl: string;
+  }>;
   fetchComparisonWithEdits(): Promise<ComparisonRow[]>;
   scrapeCreatorsConfigured(): boolean;
 }
@@ -564,6 +575,37 @@ export function createProductAnalysis(deps: {
     return env("SCRAPECREATORS_API_KEY") || env("API_KEY");
   }
 
+  async function lookupProductDetails(productId: string, name?: string) {
+    requireExternalApi(env, "scrapecreators");
+    const id = productId.trim();
+    if (!id) throw new Error("productId is required");
+    const key = apiKey();
+    if (!key) throw new Error("SCRAPECREATORS_API_KEY is not configured");
+    const base = (env("SCRAPECREATORS_API_BASE") || DEFAULT_SCRAPECREATORS_BASE)
+      .replace(/\/+$/, "");
+    const region = env("SCRAPECREATORS_REGION") || DEFAULT_REGION;
+    // The by-URL call binds the exact product id. Never fall back to a name
+    // search when the only name is a numeric id; that can return another item.
+    const lookup = await fetchScrapeCreatorsPriceByUrl(
+      base,
+      key,
+      region,
+      { productId: id, name: (name || "").trim() || id } as ProductAnalysis,
+    );
+    const hasData = Boolean(lookup.title || lookup.price > 0 || lookup.image);
+    if (!hasData) {
+      throw new Error("ScrapeCreators returned no product for that URL");
+    }
+    return {
+      productId: id,
+      name: lookup.title ?? null,
+      price: lookup.price,
+      image: lookup.image ?? null,
+      seller: lookup.seller ?? null,
+      sourceUrl: lookup.sourceUrl,
+    };
+  }
+
   async function fetchScrapeCreatorsPrice(
     product: ProductAnalysis,
   ): Promise<ScrapeCreatorsPrice> {
@@ -609,6 +651,7 @@ export function createProductAnalysis(deps: {
     updateSamplePrice,
     fetchPriceForSample,
     fetchProductWithEdits,
+    lookupProductDetails,
     fetchComparisonWithEdits,
     scrapeCreatorsConfigured: () =>
       externalApiEnabled(env, "scrapecreators") && Boolean(apiKey()),

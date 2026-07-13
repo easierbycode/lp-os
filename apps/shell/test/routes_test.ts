@@ -163,6 +163,21 @@ Deno.test({
   },
 });
 
+Deno.test("product lookup keeps the hydrated Samples-Import contract", async () => {
+  const post = await handler(req("/api/product-lookup/1730735604345573951", {
+    method: "POST",
+  }));
+  assertEquals(post.status, 405);
+  assertEquals(post.headers.get("access-control-allow-origin"), "*");
+
+  // The test environment has no ScrapeCreators key. The route still exists
+  // and fails as an upstream/config problem rather than the old route 404.
+  const get = await handler(req("/api/product-lookup/1730735604345573951"));
+  assertEquals(get.status, 502);
+  assertEquals(get.headers.get("access-control-allow-origin"), "*");
+  assertStringIncludes((await get.json()).error, "SCRAPECREATORS_API_KEY");
+});
+
 Deno.test({
   name: "GET /api/e2e-context → usable fallback without DATABASE_URL",
   ignore: hasDb,

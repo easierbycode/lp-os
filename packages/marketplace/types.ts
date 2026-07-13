@@ -94,16 +94,22 @@ export type PublishInput = {
 
 export type PublishResult = {
   /** Marketplace-side listing id (eBay: listingId). */
-  externalId: string;
+  externalId?: string;
   /** Intermediate id when the marketplace has one (eBay: offerId). */
-  offerId?: string;
+  offerId: string;
   /** Public URL of the live listing. */
-  url: string;
+  url?: string;
+  /** False when the marketplace offer is complete but intentionally
+   * unpublished. */
+  published?: boolean;
 };
 
 export interface MarketplaceClient {
   /** Cheap authenticated call proving the stored credentials work. */
   verify(): Promise<{ ok: boolean; detail: string }>;
+  /** Create/update a complete marketplace offer without making it live. */
+  createDraft(input: PublishInput): Promise<PublishResult>;
+  /** Create/update the offer and make it live. */
   publish(input: PublishInput): Promise<PublishResult>;
 }
 
@@ -144,6 +150,9 @@ export type ListSampleInput = {
   source?: string;
   /** Re-list even when an active listing row already exists. */
   force?: boolean;
+  /** Pass false to create a complete unpublished offer. Existing API callers
+   * and automatic listing sources publish by default. */
+  publish?: boolean;
 };
 
 export type ListingRow = Record<string, unknown>;

@@ -59,6 +59,59 @@ function envValue(name: string): string | undefined {
 
 const hasDb = Boolean((envValue("DATABASE_URL") ?? "").trim());
 
+function ebayEnvCredentials(): Record<string, unknown> {
+  const pairs = [
+    ["clientId", "EBAY_CLIENT_ID"],
+    ["clientSecret", "EBAY_CLIENT_SECRET"],
+    ["refreshToken", "EBAY_REFRESH_TOKEN"],
+    ["accessToken", "EBAY_ACCESS_TOKEN"],
+  ] as const;
+  const credentials: Record<string, unknown> = {};
+  for (const [key, name] of pairs) {
+    const value = (envValue(name) ?? "").trim();
+    if (value) credentials[key] = value;
+  }
+  return credentials;
+}
+
+function emptyMarketplaceAccount(marketplace: string): db.MarketplaceAccount {
+  return {
+    marketplace,
+    environment: marketplace === "ebay" &&
+        envValue("EBAY_ENVIRONMENT") === "production"
+      ? "production"
+      : "sandbox",
+    credentials: marketplace === "ebay" ? ebayEnvCredentials() : {},
+    settings: {},
+    connected_at: null,
+    updated_at: new Date(0).toISOString(),
+    updated_by: null,
+  };
+}
+
+/** Merge server-side credential fallbacks with the database row without ever
+ * persisting or exposing secret values. Values saved in Marketplace win. */
+async function effectiveMarketplaceAccount(
+  marketplace: string,
+): Promise<db.MarketplaceAccount> {
+  const fallback = emptyMarketplaceAccount(marketplace);
+  const stored = await db.getMarketplaceAccount(marketplace);
+  if (!stored) return fallback;
+  return {
+    ...stored,
+    credentials: { ...fallback.credentials, ...(stored.credentials ?? {}) },
+  };
+}
+
+async function effectiveMarketplaceAccounts(): Promise<
+  db.MarketplaceAccount[]
+> {
+  const stored = await db.listMarketplaceAccounts();
+  const names = new Set(stored.map((account) => account.marketplace));
+  names.add("ebay");
+  return await Promise.all([...names].sort().map(effectiveMarketplaceAccount));
+}
+
 /* ----------------------------------------------------------- singletons -- */
 
 // Origins allowed on the scan-relay WebSocket. data-pimp baked in the two
@@ -113,15 +166,15 @@ const lifecycle: (Lifecycle & LifecycleReads) | null = store
   })
   : null;
 
-// Real marketplace listings (eBay first). Credentials/settings live in the
-// marketplace_accounts table, filled in through the Marketplace window.
+// Real marketplace listings (eBay first). Saved credentials/settings live in
+// marketplace_accounts; EBAY_* environment variables are safe fallbacks.
 const listingService: ListingService | null = store && lifecycle
   ? createListingService({
     db,
     store,
     lifecycle,
-    getAccount: (marketplace) => db.getMarketplaceAccount(marketplace),
-    listAccounts: () => db.listMarketplaceAccounts(),
+    getAccount: effectiveMarketplaceAccount,
+    listAccounts: effectiveMarketplaceAccounts,
   })
   : null;
 
@@ -968,6 +1021,28 @@ app.all("/api/products", async (ctx) => {
   }
 });
 
+// Exact TikTok PDP hydration for Samples-Import and Inventory. This is the
+// pre-migration /api/product-lookup contract, now backed by the same
+// ScrapeCreators client as Product Analysis.
+app.all("/api/product-lookup/:id", async (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "GET") {
+    return corsJson({ ok: false, error: "Method not allowed" }, 405);
+  }
+  try {
+    const product = await productAnalysis.lookupProductDetails(
+      decodeURIComponent(ctx.params.id || ""),
+      ctx.url.searchParams.get("name") || undefined,
+    );
+    return corsJson(product);
+  } catch (error) {
+    if (error instanceof ExternalApiDisabledError) {
+      return corsJson({ ok: false, error: error.message }, 503);
+    }
+    return corsJson({ ok: false, error: errorMessage(error) }, 502);
+  }
+});
+
 // Context for the one-click E2E demo: the latest creator to post plus a few of
 // their recent product_ids. Ported from data-pimp's fetchE2EContext, asking
 // the graylog_messages store instead of an external Graylog. Priority: latest
@@ -1136,11 +1211,23 @@ function publicMarketplaceView(account: db.MarketplaceAccount) {
   const credentialKeys = Object.keys(credentials)
     .filter((k) => String(credentials[k] ?? "").trim())
     .sort();
+  const envCredentialKeys = account.marketplace === "ebay"
+    ? Object.keys(ebayEnvCredentials()).sort()
+    : [];
+  const hasAccessToken = Boolean(String(credentials.accessToken ?? "").trim());
+  const missingCredentialKeys = account.marketplace === "ebay" &&
+      !hasAccessToken
+    ? ["clientId", "clientSecret", "refreshToken"].filter((key) =>
+      !String(credentials[key] ?? "").trim()
+    )
+    : [];
   return {
     marketplace: account.marketplace,
     environment: account.environment,
     connected: accountConnected(account),
     credentialKeys,
+    envCredentialKeys,
+    missingCredentialKeys,
     settings: account.settings ?? {},
     connected_at: account.connected_at,
     updated_at: account.updated_at,
@@ -1213,7 +1300,7 @@ app.all("/api/marketplaces", async (ctx) => {
   }
   if (!hasDb) return dbUnavailable();
   try {
-    const accounts = await db.listMarketplaceAccounts();
+    const accounts = await effectiveMarketplaceAccounts();
     return json(accounts.map(publicMarketplaceView));
   } catch (error) {
     return json({ error: errorMessage(error) }, 500);
@@ -1246,8 +1333,7 @@ app.all("/api/marketplaces/:marketplace", async (ctx) => {
   if (!marketplace) return json({ error: "marketplace required" }, 400);
   try {
     if (ctx.req.method === "GET") {
-      const account = await db.getMarketplaceAccount(marketplace);
-      if (!account) return json({ error: "not configured" }, 404);
+      const account = await effectiveMarketplaceAccount(marketplace);
       return json(publicMarketplaceView(account));
     }
     if (ctx.req.method === "POST") {
@@ -1292,14 +1378,15 @@ app.all("/api/marketplaces/:marketplace", async (ctx) => {
           if (settings[k] === null) delete settings[k];
         }
       }
-      const account = await db.upsertMarketplaceAccount(marketplace, {
+      await db.upsertMarketplaceAccount(marketplace, {
         environment,
         credentials,
         settings,
         connected_at: current?.connected_at ?? null,
         updated_by: String(body.operator ?? "").trim() || null,
       });
-      return json({ ok: true, account: publicMarketplaceView(account) });
+      const effective = await effectiveMarketplaceAccount(marketplace);
+      return json({ ok: true, account: publicMarketplaceView(effective) });
     }
     if (ctx.req.method === "DELETE") {
       await db.deleteMarketplaceAccount(marketplace);

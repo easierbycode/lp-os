@@ -494,7 +494,7 @@
           class="chip"><span class="dot"></span><span id="conn-text">checking…</span></span>
       </div>
       <p
-        class="sub">List samples for sale on eBay — the first of the initial three marketplaces. Credentials stay on this LP-OS server (Postgres), are never shown back whole, and are never written to the event log.</p>
+        class="sub">Create complete, unpublished eBay offers for review. Credentials stay on this LP-OS server (Postgres or EBAY_* environment variables), are never shown back whole, and are never written to the event log.</p>
 
       <div id="cards">
         <div class="card" data-card="connection">
@@ -674,7 +674,7 @@
               <div class="muted fx-note" id="fx-note"></div>
             </div>
             <div class="btns">
-              <button id="list-now" class="primary">List on eBay</button>
+              <button id="list-now" class="primary">Create eBay draft</button>
             </div>
             <div id="list-msg" class="msg"></div>
           </div>
@@ -699,6 +699,7 @@
               <span class="spacer"></span>
               <select id="filter-status">
                 <option value="">All statuses</option>
+                <option value="draft">Draft offers</option>
                 <option value="listed">Listed</option>
                 <option value="pending">Pending</option>
                 <option value="failed">Failed</option>
@@ -811,9 +812,15 @@
       }
       $("environment").value = account.environment;
       $("saved-keys").textContent = account.credentialKeys.length
-        ? `Saved credentials: ${
-          account.credentialKeys.join(", ")
-        } (values never re-shown — retype to replace, save an empty field to keep it)`
+        ? `Saved credentials: ${account.credentialKeys.join(", ")}${
+          account.envCredentialKeys && account.envCredentialKeys.length
+            ? ` · from EBAY_*: ${account.envCredentialKeys.join(", ")}`
+            : ""
+        }${
+          account.missingCredentialKeys && account.missingCredentialKeys.length
+            ? ` · still needed: ${account.missingCredentialKeys.join(", ")}`
+            : ""
+        } (values never re-shown — retype to replace, blank fields keep saved values)`
         : "No credentials saved yet.";
       const s = account.settings || {};
       const loc = s.location || {};
@@ -971,7 +978,7 @@
         showMsg("list-msg", "Enter a sample ID or TikTok product ID.", false);
         return;
       }
-      const body = { marketplace: "ebay", operator: OPERATOR };
+      const body = { marketplace: "ebay", operator: OPERATOR, publish: false };
       if (/^\d{18,19}$/.test(ref)) body.productId = ref;
       else body.sampleId = ref;
       const price = $("list-price").value.trim();
@@ -990,7 +997,7 @@
         }
         showMsg(
           "list-msg",
-          result.message || (result.ok ? "Listed." : result.error),
+          result.message || (result.ok ? "Draft created." : result.error),
           !!result.ok,
         );
         await loadListings();
