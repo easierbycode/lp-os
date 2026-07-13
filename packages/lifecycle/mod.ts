@@ -27,12 +27,15 @@ import type {
   AgencyIntakeResult,
   AssignmentInput,
   AssignmentResult,
+  BulkSampleEditInput,
+  BulkSampleEditResult,
   BulkSoldInput,
   BulkSoldResult,
   CampaignEntry,
   DueListingSchedule,
   ImportInput,
   ImportResult,
+  InventorySampleChange,
   Lifecycle,
   LifecycleDeps,
   LifecycleReads,
@@ -1628,6 +1631,193 @@ export function createLifecycle(
     };
   }
 
+  // -------------------------------------------------------------------------
+  // Inventory Workbench bulk edit (PATCH /api/samples/bulk).
+  //
+  // The atomic all-or-nothing Postgres work (row locks, version checks, audit
+  // transaction rows, idempotent requestId replay) lives in the injected
+  // InventoryWriter (@lp-os/db applyInventoryBatch). This layer validates the
+  // status vocabulary up front and emits the per-sample Graylog events AFTER
+  // the commit — best-effort, surfaced as warnings, never rolling back
+  // committed inventory. A replayed request emits no events (the original
+  // request already did).
+  // -------------------------------------------------------------------------
+  async function recordBulkSampleEdit(
+    input: BulkSampleEditInput,
+  ): Promise<BulkSampleEditResult> {
+    const inventory = deps.inventory;
+    if (!inventory) {
+      throw new Error(
+        "bulk sample edits are not available: no inventory writer configured",
+      );
+    }
+
+    // Vocabulary guard before any write: only kind:"status" entries may be
+    // written to samples.status; sold must go through the sold flow.
+    for (const mutation of input.mutations ?? []) {
+      const status = mutation?.patch?.status;
+      if (status === undefined) continue;
+      if (status === "sold") {
+        throw new Error(
+          "Use the sold flow (mark_sample_sold / POST /api/sample-sold) to " +
+            "mark a sample sold, so the resale revenue is attributed to a " +
+            "creator account.",
+        );
+      }
+      const entry = STATUSES.find((s) => s.value === status);
+      if (!entry || entry.kind !== "status") {
+        throw new Error(
+          `"${String(status)}" is not a valid sample status (badges like ` +
+            `fire_sale/lowest_price are not statuses)`,
+        );
+      }
+    }
+
+    const outcome = await inventory.applyBatch({
+      requestId: String(input.requestId ?? ""),
+      operator: String(input.operator ?? ""),
+      note: input.note,
+      mutations: (input.mutations ?? []).map((m) => ({
+        sampleId: Number(m?.sampleId),
+        expectedVersion: Number(m?.expectedVersion),
+        patch: m?.patch ?? {},
+      })),
+    });
+
+    const warnings: string[] = [];
+    const now = new Date().toISOString();
+    const editableFields = [
+      "location",
+      "bundle_id",
+      "quantity",
+      "current_price",
+      "fire_sale",
+      "notes",
+    ];
+
+    if (!outcome.replayed) {
+      for (const change of outcome.changes) {
+        const sampleId = change.sampleId;
+        const productId = change.qr_code;
+        const name = change.name;
+        const label = name ?? productId ?? `sample ${sampleId}`;
+
+        if (change.action === "check_out") {
+          const creator = String(change.after.checked_out_to ?? "");
+          const ok = await sendEvent(
+            `thirsty sample assigned: ${label} → ${creator}`,
+            {
+              sample_assignment_json: JSON.stringify({
+                productId,
+                sampleId,
+                name,
+                creator,
+                fromStatus: (change.before.status as string | null) ?? null,
+                assignedAt: now,
+                note: input.note || undefined,
+                batchId: outcome.batchId,
+              }),
+              creator,
+              sample_status: "checked_out",
+              sample_event: "assigned",
+              product_id: productId ?? undefined,
+              sample_id: String(sampleId),
+              batch_id: outcome.batchId,
+              sample_source: "workbench-bulk-edit",
+            },
+          );
+          if (!ok) {
+            warnings.push(
+              `Graylog assignment event for sample ${sampleId} was NOT recorded`,
+            );
+          }
+        } else if (change.after.status !== undefined) {
+          const ok = await sendEvent(
+            `thirsty sample status: ${label}`,
+            {
+              sample_status_json: JSON.stringify({
+                productId,
+                sampleId,
+                status: change.after.status,
+                previousStatus: (change.before.status as string | null) ??
+                  null,
+                qrCode: productId,
+                name,
+                source: "workbench-bulk-edit",
+                note: input.note || undefined,
+                updatedAt: now,
+                batchId: outcome.batchId,
+              }),
+              sample_status: String(change.after.status),
+              product_id: productId ?? undefined,
+              sample_id: String(sampleId),
+              batch_id: outcome.batchId,
+              sample_source: "workbench-bulk-edit",
+            },
+          );
+          if (!ok) {
+            warnings.push(
+              `Graylog status event for sample ${sampleId} was NOT recorded`,
+            );
+          }
+        }
+
+        const edited = editableFields.filter((f) => f in change.after);
+        if (change.action === "check_in") edited.push("checked_out_to");
+        if (edited.length) {
+          const ok = await sendEvent(
+            `thirsty sample edited: ${label} (${edited.join(", ")})`,
+            {
+              sample_inventory_edit_json: JSON.stringify({
+                productId,
+                sampleId,
+                name,
+                fields: edited,
+                before: change.before,
+                after: change.after,
+                editedAt: now,
+                note: input.note || undefined,
+                operator: input.operator || undefined,
+                batchId: outcome.batchId,
+              }),
+              sample_event: "inventory_edited",
+              product_id: productId ?? undefined,
+              sample_id: String(sampleId),
+              batch_id: outcome.batchId,
+              sample_source: "workbench-bulk-edit",
+            },
+          );
+          if (!ok) {
+            warnings.push(
+              `Graylog inventory-edit event for sample ${sampleId} was NOT recorded`,
+            );
+          }
+        }
+      }
+    }
+
+    const changed = outcome.changes.length;
+    const base = outcome.replayed
+      ? `Replayed batch ${outcome.batchId}: ${changed} sample(s) were ` +
+        `already edited by this request (nothing reapplied).`
+      : `Bulk edit applied to ${changed} sample(s) (batch ${outcome.batchId}).`;
+    const message = warnings.length
+      ? `${base} WARNING: ${warnings.join("; ")}.`
+      : base;
+
+    return {
+      ok: true,
+      batchId: outcome.batchId,
+      requestId: outcome.requestId,
+      replayed: outcome.replayed,
+      rows: outcome.rows,
+      changes: outcome.changes as InventorySampleChange[],
+      warnings,
+      graylog: warnings.length === 0,
+      message,
+    };
+  }
+
   return {
     recordSampleStatus,
     recordSampleSold,
@@ -1636,6 +1826,7 @@ export function createLifecycle(
     recordAgencyIntake,
     recordSampleAssignment,
     recordSampleImport,
+    recordBulkSampleEdit,
     listSampleStatuses,
     fetchKnownCreators,
     fetchCreatorsForProduct,

@@ -11,6 +11,7 @@
     { "id": "app.scanner", "label": "Scanner (remote barcode scanner)" },
     { "id": "app.graylog", "label": "Graylog log search" },
     { "id": "app.marketplace", "label": "Marketplace listings (eBay)" },
+    { "id": "app.warehouse", "label": "Warehouse (3D dashboard)" },
     { "id": "ops.debugCounts", "label": "Row-count debug endpoint" },
     {
       "id": "ops.checkoutAlerts",
@@ -44,6 +45,7 @@
         "app.installExtension": true,
         "app.scanner": true,
         "app.marketplace": true,
+        "app.warehouse": true,
         "app.graylog": false,
         "app.productAnalysis": false,
         "folder.demos": false,

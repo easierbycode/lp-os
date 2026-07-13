@@ -64,6 +64,12 @@ const ICON_GRADIENTS = `
       <linearGradient id="g-market" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#6366f1"/>
       </linearGradient>
+      <linearGradient id="g-lp" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#f472b6"/><stop offset="1" stop-color="#c026d3"/>
+      </linearGradient>
+      <linearGradient id="g-wh" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#ea580c"/>
+      </linearGradient>
     </defs>
   </svg>`;
 
@@ -214,6 +220,26 @@ const ICONS = {
       <circle cx="41.5" cy="22.5" r="3.2" fill="#4f46e5"/>
       <text x="31" y="40" font-family="Space Grotesk, sans-serif" font-size="15" font-weight="700" fill="#4f46e5" text-anchor="middle">$</text>
     </svg>`,
+
+  // "LP" monogram tile — the Lifepreneur member site.
+  lp: `
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#g-lp)"/>
+      <rect x="6" y="6" width="52" height="26" rx="14" fill="#fff" opacity=".12"/>
+      <text x="32" y="41" font-family="Space Grotesk, sans-serif" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">LP</text>
+    </svg>`,
+
+  // Isometric warehouse building — the 3D warehouse dashboard.
+  warehouse: `
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#g-wh)"/>
+      <path d="M14 30 32 18l18 12v18H14z" fill="#fff" opacity=".92"/>
+      <path d="M14 30 32 18l18 12" fill="none" stroke="#7c2d12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="26" y="34" width="12" height="14" rx="1" fill="#ea580c"/>
+      <path d="M26 39h12M32 34v14" stroke="#7c2d12" stroke-width="1.6"/>
+      <rect x="18" y="34" width="5" height="5" rx="1" fill="#fbbf24"/>
+      <rect x="41" y="34" width="5" height="5" rx="1" fill="#fbbf24"/>
+    </svg>`,
 };
 
 /* --------------------------------------------------------------- config -- */
@@ -272,6 +298,12 @@ const MEMBER_APP_URL = baseAppUrl(OS_CONFIG.memberAppUrl, "/member");
 const MEMBER_WEB_URL = baseAppUrl(
   OS_CONFIG.memberWebUrl,
   "https://data-pimp.easierbycode.deno.net/member",
+);
+// Lifepreneur member site (lifepreneur-v1). LIFEPRENEUR_URL env (via
+// OS_CONFIG.lifepreneurUrl) points it at a local instance during dev.
+const LIFEPRENEUR_URL = baseAppUrl(
+  OS_CONFIG.lifepreneurUrl,
+  "https://www.lifepreneur.io",
 );
 const INVENTORY_APP_URL = baseAppUrl(
   OS_CONFIG.inventoryAppUrl,
@@ -396,6 +428,20 @@ const FOLDERS = [
         width: 800,
         height: 860,
       },
+      {
+        id: "warehouse",
+        name: "Warehouse",
+        icon: ICONS.warehouse,
+        flag: "app.warehouse",
+        // CSS-3D warehouse dashboard (served by the shell at /warehouse).
+        // Walking its steps posts warehouse-step messages back up; the shell
+        // opens the matching apps beside it (see the listener below the
+        // marketplace relay). openApp appends ?user= for attribution.
+        url: "/warehouse",
+        allow: "fullscreen",
+        width: 1280,
+        height: 800,
+      },
     ],
   },
   {
@@ -517,6 +563,19 @@ const FOLDERS = [
         // The member web dashboard (seller/streamer/content dashboards) —
         // a separate deployment from Member/App (MEMBER_WEB_URL).
         url: MEMBER_WEB_URL,
+        allow: "fullscreen",
+        external: true,
+        width: 1180,
+        height: 780,
+      },
+      {
+        id: "lifepreneur",
+        name: "LP",
+        icon: ICONS.lp,
+        // The Lifepreneur member site (lifepreneur-v1) — opens at the login
+        // page. LIFEPRENEUR_URL points it at a local instance during dev; the
+        // site's CSP frame-ancestors must allow this shell's origin.
+        url: LIFEPRENEUR_URL ? LIFEPRENEUR_URL + "/auth/login" : "",
         allow: "fullscreen",
         external: true,
         width: 1180,
@@ -854,6 +913,12 @@ function closeWindow(win) {
   // Deleted from the map BEFORE the dock release: updateScannerDock must see
   // the scanner window as already gone, or the idle status tile never leaves.
   windows.delete(win.id);
+  // Closing the workbench window ends its batch-scan session — scans revert
+  // to the default kiosk/intake routing immediately.
+  if (batchScan && batchScan.winId === win.id) {
+    batchScan = null;
+    flashStatus("Batch scan ended");
+  }
   // The scanner's dock element is shared status UI — release it (it stays put
   // while any scanner is still connected) instead of removing it outright.
   if (win.dockEl && win.dockEl.id === "dock-scanner") {
@@ -1359,6 +1424,14 @@ function openApp(item) {
     flashStatus(`${item.name} is not configured`);
     return null;
   }
+  // Attribution ride-along: the Inventory tracker and the Warehouse dashboard
+  // both act as the shell's current mocked user, so their windows get ?user=
+  // appended — the tracker forwards it to the bulk API, keeping the operator
+  // consistent across shell, tracker, and Postgres audit rows.
+  if (item.id === "inventory" || item.id === "warehouse") {
+    const withUser = urlWithParams(item.url, { user: currentUserId() });
+    if (withUser) item = { ...item, url: withUser };
+  }
   const instance = nextInstance(item.id);
   const id = `app:${item.id}#${instance}`;
   // Displayed ordinal counts the windows CURRENTLY open, so reopening an
@@ -1713,6 +1786,76 @@ globalThis.addEventListener("message", (e) => {
   flashStatus(note);
 });
 
+/* ------------------------------------------------- warehouse dashboard -- */
+
+// Walking the 3D warehouse (/warehouse) drives the OS: each step announces
+// itself and the shell launches/focuses the matching apps beside it — the
+// "virtual screens" of the warehouse tour. Same-origin only, and only the
+// actual Warehouse window's iframe is trusted (source-window match).
+const WAREHOUSE_STEP_APPS = {
+  receiving: [{ app: "inventory", path: "/scan" }],
+  inventory: [{ app: "inventory" }],
+  studio: [{ app: "samples-import" }],
+  marketplace: [{ app: "kiosk" }, { app: "marketplace" }],
+  overview: [],
+};
+
+globalThis.addEventListener("message", (e) => {
+  if (e.origin !== location.origin) return;
+  const data = e.data;
+  if (!data || data.source !== "lp-os-warehouse") return;
+  if (data.type !== "warehouse-step") return;
+  const whWin = windowsForApp("warehouse").find((w) => {
+    const frame = windowFrame(w);
+    return frame && frame.contentWindow === e.source;
+  });
+  if (!whWin) return;
+
+  const step = String(data.step || "");
+  const wanted = WAREHOUSE_STEP_APPS[step];
+  if (!wanted) return;
+
+  const opened = [];
+  for (const { app: appId, path } of wanted) {
+    let win = windowsForApp(appId)[0];
+    if (!win) {
+      const item = appItemById(appId);
+      if (!item || !allows(item.flag) || !itemConfigured(item) || !item.url) {
+        continue;
+      }
+      // Fresh windows may deep-link a step path (e.g. Inventory /scan for
+      // receiving); already-open windows are focused, never navigated away.
+      win = openApp(path ? { ...item, url: item.url + path } : item);
+      if (!win) continue;
+    }
+    if (win.minimized) setMinimized(win, false);
+    opened.push({ app: appId, winId: win.id });
+  }
+
+  // Tile the tour: warehouse LEFT, the step's primary app RIGHT (the same
+  // split the scanner workspace uses). Overview leaves the layout alone.
+  if (opened.length) {
+    if (whWin.snapped !== "left") snapWindow(whWin, "left");
+    const primary = windows.get(opened[0].winId);
+    if (primary && primary.snapped !== "right") snapWindow(primary, "right");
+    focusWindow(whWin.id);
+    flashStatus(`Warehouse → ${step}`);
+  }
+
+  const frame = windowFrame(whWin);
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage(
+      {
+        source: "thirsty-os",
+        type: "warehouse-ack",
+        step,
+        opened: opened.map((o) => o.app),
+      },
+      location.origin,
+    );
+  }
+});
+
 /* ------------------------------------------------------------ scan link -- */
 
 // Companion-scanner plumbing. Handheld Scanner devices (the Scanner app, or
@@ -1974,12 +2117,88 @@ function scanShort(value) {
   return value.length > 28 ? value.slice(0, 25) + "…" : value;
 }
 
+/* ------------------------------------------------- workbench batch mode -- */
+
+// While the Inventory workbench has batch-scan mode ON, that specific window
+// owns every UPC/EAN AND TikTok product-id scan — the default kiosk/intake
+// routing is bypassed until the workbench turns the mode off or the window
+// closes. Announced by the tracker via postMessage (see listener below).
+let batchScan = null; // { winId, sessionId } | null
+
+function batchScanWindow() {
+  if (!batchScan) return null;
+  const win = windows.get(batchScan.winId);
+  if (!win) batchScan = null; // window vanished without a close event
+  return win;
+}
+
+function postScannerPresence(win) {
+  const frame = windowFrame(win);
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage(
+      {
+        source: "thirsty-os",
+        type: "scanner-presence",
+        count: totalScanners(),
+        devices: scannerState.devices,
+      },
+      INVENTORY_ORIGIN || location.origin,
+    );
+  }
+}
+
+globalThis.addEventListener("message", (e) => {
+  if (e.origin !== INVENTORY_ORIGIN && e.origin !== location.origin) return;
+  const data = e.data;
+  if (!data || data.source !== "lp-os-inventory") return;
+  if (data.type !== "batch-scan-mode") return;
+  // Bind the mode to the exact Inventory window that asked for it — several
+  // may be open; e.source disambiguates. Prefer topmost on a stale tie.
+  const win = windowsForApp("inventory").find((w) => {
+    const frame = windowFrame(w);
+    return frame && frame.contentWindow === e.source;
+  });
+  if (!win) return;
+  if (data.enabled) {
+    batchScan = { winId: win.id, sessionId: String(data.sessionId || "") };
+    flashStatus("Batch scan ON — scans go to the workbench");
+    postScannerPresence(win);
+  } else if (batchScan && batchScan.winId === win.id) {
+    batchScan = null;
+    flashStatus("Batch scan off");
+  }
+});
+
 // The router: classify the scanned value and fan it out.
 function routeScan(evt) {
   const value = String((evt && evt.value) || "").trim();
   if (!value) return;
   if (!rememberScan(evt.scanId)) return;
   flashStatus(`Scan · ${scanShort(value)}`);
+  // Batch mode intercept: both scan shapes go to the owning workbench window.
+  // Unrecognized values still fall through to the HID path below.
+  if (
+    batchScan &&
+    (SCAN_PRODUCT_ID_RE.test(value) || SCAN_BARCODE_RE.test(value))
+  ) {
+    const win = batchScanWindow();
+    if (win) {
+      if (win.minimized) setMinimized(win, false);
+      postScanToWindow(
+        win,
+        {
+          source: "thirsty-os",
+          type: "scan",
+          kind: SCAN_PRODUCT_ID_RE.test(value) ? "productId" : "barcode",
+          value,
+          scanId: evt.scanId,
+          sessionId: batchScan.sessionId,
+        },
+        INVENTORY_ORIGIN || location.origin,
+      );
+      return; // batch scans stay workbench-local (no graylogFollow chase)
+    }
+  }
   if (SCAN_PRODUCT_ID_RE.test(value)) {
     routeScanToKiosk(value, evt.scanId);
   } else if (SCAN_BARCODE_RE.test(value)) {
@@ -2054,6 +2273,10 @@ function ensureScannerDock() {
 }
 
 function updateScannerDock() {
+  // Every presence mutation funnels through here, so this is also where a
+  // batch-mode workbench hears about scanners connecting/disconnecting.
+  const batchWin = batchScanWindow();
+  if (batchWin) postScannerPresence(batchWin);
   const win = windowsForApp("scanner")[0];
   const total = totalScanners();
   if (!win && total === 0) {

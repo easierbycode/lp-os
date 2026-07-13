@@ -320,6 +320,53 @@ export async function listListingsWithSamples(
   return (r.rows as Row[]).map(serializeRow);
 }
 
+// ---------------------------------------------------------------------------
+// Inventory Workbench — atomic bulk edits + barcode lookup (inventory.ts owns
+// the transaction logic against a structural SqlClient; this wires the pool).
+// ---------------------------------------------------------------------------
+
+export {
+  InventoryBatchError,
+  type InventoryBatchOutcome,
+  type InventoryBatchRequest,
+  type InventoryMutation,
+  type InventoryPatch,
+  type InventorySampleChange,
+  lookupByCode,
+  runInventoryBatch,
+  type SqlClient,
+  validateInventoryBatchRequest,
+} from "./inventory.ts";
+import {
+  type InventoryBatchOutcome,
+  lookupByCode as lookupByCodeOn,
+  runInventoryBatch as runInventoryBatchOn,
+  validateInventoryBatchRequest as validateBatch,
+} from "./inventory.ts";
+
+/** Validate + run one atomic Inventory Workbench batch on a dedicated
+ * PoolClient (all-or-nothing; idempotent by requestId). */
+export async function applyInventoryBatch(
+  body: unknown,
+): Promise<InventoryBatchOutcome> {
+  const request = validateBatch(body);
+  const client = await getPool().connect();
+  try {
+    return await runInventoryBatchOn(client, request);
+  } finally {
+    client.release();
+  }
+}
+
+/** All samples (qr_code or related_upc) + bundles matching a scanned code. */
+export function lookupSamplesByCode(code: string): Promise<{
+  code: string;
+  samples: Record<string, unknown>[];
+  bundles: Record<string, unknown>[];
+}> {
+  return lookupByCodeOn(getPool(), code);
+}
+
 let schemaPromise: Promise<void> | null = null;
 
 /** Idempotent: creates every LP-OS table/index and seed row if missing.

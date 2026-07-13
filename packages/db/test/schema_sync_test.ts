@@ -40,6 +40,7 @@ Deno.test("consolidated schema covers every contract table and index", async () 
   assertEquals(names(migrations, TABLE_RE), [
     "bundles",
     "graylog_messages",
+    "inventory_batches",
     "listings",
     "marketplace_accounts",
     "roles",
@@ -62,6 +63,7 @@ Deno.test("consolidated schema covers every contract table and index", async () 
     "idx_samples_related_upc",
     "idx_samples_sold_to",
     "idx_samples_status",
+    "idx_transactions_batch_id",
     "idx_transactions_created_at",
     "idx_transactions_sample_id",
   ]);
