@@ -45,7 +45,7 @@ in 2.7/2.8. Experimental upstream — expect churn.
   blank; only useful to prove the compiled payload boots and serves).
 
 Flag-position gotcha: `deno desktop` treats everything after the entrypoint as
-*script* args, so `deno task desktop:shell --backend cef` silently builds the
+_script_ args, so `deno task desktop:shell --backend cef` silently builds the
 default webview backend (the shell task ends in `main.ts`); the member task has
 no entrypoint, so `deno task desktop:member --backend cef` does work.
 
@@ -76,7 +76,7 @@ Why the task flags are what they are:
   adopts the runtime's startup window (first `new Deno.BrowserWindow()`) after
   the server answers `/health`, reads `screen.availWidth/Height` via
   `executeJs`, and calls `setPosition(0,0)` + `setSize` — deno 2.9 has no
-  maximize/fullscreen API. Gotchas baked into that code: adopting *before* the
+  maximize/fullscreen API. Gotchas baked into that code: adopting _before_ the
   server is up strands the window on the placeholder page, and `executeJs`
   resolves with the value wrapped as `{ ok, value }` (CEF backend at least).
 - Launch Windows bundles via `<Name>.bat`, not `laufey.exe` directly — the
@@ -92,11 +92,11 @@ Why the task flags are what they are:
   creation under emulation (0xc0000409 in ucrtbase.dll; WebView2 is installed
   and current). The compiled server inside the payload works — verified by
   probing its port before teardown. Fix verified on this machine 2026-07-06:
-  build with the CEF backend (`deno task desktop:shell:cef`) — the bundled
-  x64 Chromium runs fine under emulation and renders the shell UI. `--backend
-  raw` also stays up, but it's a bare winit host with no web engine (blank
-  window), so it only proves the payload boots. Webview bundles are fine on
-  x64 Windows.
+  build with the CEF backend (`deno task desktop:shell:cef`) — the bundled x64
+  Chromium runs fine under emulation and renders the shell UI. `--backend
+  raw`
+  also stays up, but it's a bare winit host with no web engine (blank window),
+  so it only proves the payload boots. Webview bundles are fine on x64 Windows.
 - **Member desktop on Windows:** requests 500 because the deploy.json static
   routes (`/_app/immutable/:file*`) are opened as literal paths in the desktop
   VFS runtime (os error 123) instead of pattern-matching. The same
@@ -104,11 +104,11 @@ Why the task flags are what they are:
   `deno run -A .deno-deploy/server.ts`, so this is upstream
   (@deno/experimental-route-config under `deno desktop`), not our config.
   Re-test on newer Deno releases.
-- On this dev machine the x64 Deno and ARM64 Node toolchains used to fight
-  over `apps/member/node_modules`. Resolved 2026-07-06 by taking apps/member
-  OUT of the root deno.json workspace (matching CLAUDE.md's "not a Deno
-  workspace member") — npm now owns `apps/member/node_modules` and Deno runs
-  it byonm-style, so root `deno install`/`deno task` no longer rewrites it.
+- On this dev machine the x64 Deno and ARM64 Node toolchains used to fight over
+  `apps/member/node_modules`. Resolved 2026-07-06 by taking apps/member OUT of
+  the root deno.json workspace (matching CLAUDE.md's "not a Deno workspace
+  member") — npm now owns `apps/member/node_modules` and Deno runs it
+  byonm-style, so root `deno install`/`deno task` no longer rewrites it.
   Remaining quirk: `deno task dev:member` executes vite under x64 Deno, which
   needs the x64 native twins next to npm's ARM64 ones. After any `npm ci` in
   apps/member, re-add them (then `git checkout -- package-lock.json`, npm
@@ -131,15 +131,14 @@ None of these can be done from this repo; they're console/DNS/repo-admin steps.
 - [ ] **Before 2026-07-20:** confirm in console.deno.com that data-pimp's deploy
       (its `deno.json` uses the new `{org, app}` format) is actually on the new
       Deno Deploy platform — Deploy Classic shuts down that day.
-- [ ] Deploy apps/shell and apps/member to the new Deno Deploy. `deploy`
-      blocks are in place (org `easierbycode`, apps `lp-os` and `lp-os-member`
-      — create those apps in console.deno.com, or edit the blocks to match).
-      Shell build step: `deno task build` in apps/shell (scan-client bundle +
-      extension zip); member build step: `deno task build` in apps/member
-      (entrypoint `.deno-deploy/server.ts`). Set the shell's env there too:
-      DATABASE_URL, MEMBER_APP_URL (the member deploy's URL), and
-      GRAYLOG_INGEST_TOKEN. The plan's target: shell replaces data-pimp's
-      deploy behind thirsty.store.
+- [ ] Deploy apps/shell and apps/member to the new Deno Deploy. `deploy` blocks
+      are in place (org `easierbycode`, apps `lp-os` and `lp-os-member` — create
+      those apps in console.deno.com, or edit the blocks to match). Shell build
+      step: `deno task build` in apps/shell (scan-client bundle + extension
+      zip); member build step: `deno task build` in apps/member (entrypoint
+      `.deno-deploy/server.ts`). Set the shell's env there too: DATABASE_URL,
+      MEMBER_APP_URL (the member deploy's URL), and GRAYLOG_INGEST_TOKEN. The
+      plan's target: shell replaces data-pimp's deploy behind thirsty.store.
 - [ ] Repoint or retire `thirsty.store` / `admin.thirsty.store` once LP-OS is
       verified at parity; then update the shell FOLDERS defaults
       (`INVENTORY_APP_URL` et al.), the extension's default GELF endpoint

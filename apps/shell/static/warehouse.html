@@ -1,122 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LP Warehouse — 3D</title>
-  <link rel="stylesheet" href="/warehouse.css">
-</head>
-<body>
-  <!-- 3D stage -->
-  <div class="stage">
-    <div class="wrapper" id="wrapper">
-      <div class="ground" id="ground">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LP Warehouse — 3D</title>
+    <link rel="stylesheet" href="/warehouse.css">
+  </head>
+  <body>
+    <!-- 3D stage -->
+    <div class="stage">
+      <div class="wrapper" id="wrapper">
+        <div class="ground" id="ground">
+          <!-- Sky -->
+          <div class="sun">☀️</div>
+          <div class="cloud cloud-1">☁️</div>
+          <div class="cloud cloud-2">☁️</div>
+          <div class="drone">🛸</div>
 
-        <!-- Sky -->
-        <div class="sun">☀️</div>
-        <div class="cloud cloud-1">☁️</div>
-        <div class="cloud cloud-2">☁️</div>
-        <div class="drone">🛸</div>
+          <!-- Perimeter road + dock -->
+          <div class="road"></div>
+          <div class="road-stripes"></div>
+          <div class="dock-plate"></div>
+          <div class="truck" id="truck">🚚</div>
+          <div class="ship-truck">🚛</div>
 
-        <!-- Perimeter road + dock -->
-        <div class="road"></div>
-        <div class="road-stripes"></div>
-        <div class="dock-plate"></div>
-        <div class="truck" id="truck">🚚</div>
-        <div class="ship-truck">🚛</div>
-
-        <!-- Zone floor decals (flat) -->
-        <div class="zone-decal decal-receiving" data-step="receiving">
+          <!-- Zone floor decals (flat) -->
+          <div class="zone-decal decal-receiving" data-step="receiving">
           <span class="decal-num">1</span> RECEIVING
         </div>
-        <div class="zone-decal decal-inventory" data-step="inventory">
+          <div class="zone-decal decal-inventory" data-step="inventory">
           <span class="decal-num">2</span> INVENTORY
         </div>
-        <div class="zone-decal decal-studio" data-step="studio">
+          <div class="zone-decal decal-studio" data-step="studio">
           <span class="decal-num">3</span> STUDIO
         </div>
-        <div class="zone-decal decal-marketplace" data-step="marketplace">
+          <div class="zone-decal decal-marketplace" data-step="marketplace">
           <span class="decal-num">4</span> MARKETPLACE
         </div>
 
-        <!-- Aisle paint -->
-        <div class="aisle aisle-a"></div>
-        <div class="aisle aisle-b"></div>
+          <!-- Aisle paint -->
+          <div class="aisle aisle-a"></div>
+          <div class="aisle aisle-b"></div>
 
-        <!-- Conveyor: receiving -> inventory -->
-        <div class="conveyor"></div>
-        <div class="conveyor-box cbox-1">📦</div>
-        <div class="conveyor-box cbox-2">📦</div>
+          <!-- Conveyor: receiving -> inventory -->
+          <div class="conveyor"></div>
+          <div class="conveyor-box cbox-1">📦</div>
+          <div class="conveyor-box cbox-2">📦</div>
 
-        <!-- Studio props -->
-        <div class="studio-backdrop"></div>
-        <div class="ring-light"><span></span></div>
-        <div class="camera-prop">🎥</div>
-        <div class="studio-light l-1">💡</div>
-        <div class="studio-light l-2">💡</div>
-        <div class="studio-talent">🕺</div>
-        <div class="pack-table"></div>
-        <div class="pack-worker">🧑‍🏭</div>
-        <div class="pack-stuff">🎀📦</div>
+          <!-- Studio props -->
+          <div class="studio-backdrop"></div>
+          <div class="ring-light"><span></span></div>
+          <div class="camera-prop">🎥</div>
+          <div class="studio-light l-1">💡</div>
+          <div class="studio-light l-2">💡</div>
+          <div class="studio-talent">🕺</div>
+          <div class="pack-table"></div>
+          <div class="pack-worker">🧑‍🏭</div>
+          <div class="pack-stuff">🎀📦</div>
 
-        <!-- Marketplace props -->
-        <div class="kiosk-sign bb">🏪 KIOSK</div>
-        <div class="ready-tag bb">🏷️ READY TO SELL</div>
-        <div class="proc-desk"></div>
-        <div class="proc-worker">🧑‍💻</div>
-        <div class="proc-laptop">💻</div>
-        <div class="proc-outbox">📬</div>
-        <div class="ship-boxes">📦📦</div>
+          <!-- Marketplace props -->
+          <div class="kiosk-sign bb">🏪 KIOSK</div>
+          <div class="ready-tag bb">🏷️ READY TO SELL</div>
+          <div class="proc-desk"></div>
+          <div class="proc-worker">🧑‍💻</div>
+          <div class="proc-laptop">💻</div>
+          <div class="proc-outbox">📬</div>
+          <div class="ship-boxes">📦📦</div>
 
-        <!-- Receiving props -->
-        <div class="recv-worker">🧑‍🏭</div>
-        <div class="recv-clipboard">📋</div>
+          <!-- Receiving props -->
+          <div class="recv-worker">🧑‍🏭</div>
+          <div class="recv-clipboard">📋</div>
 
-        <!-- Forklift (tows a pallet through the aisles) -->
-        <div class="forklift" id="forklift">🚜</div>
-        <div class="forklift-load" id="forkliftLoad">📦</div>
+          <!-- Forklift (tows a pallet through the aisles) -->
+          <div class="forklift" id="forklift">🚜</div>
+          <div class="forklift-load" id="forkliftLoad">📦</div>
 
-        <!-- Walking workers -->
-        <div class="walker walker-1">🚶</div>
-        <div class="walker walker-2">🚶</div>
-        <div class="warehouse-cat">🐈</div>
+          <!-- Walking workers -->
+          <div class="walker walker-1">🚶</div>
+          <div class="walker walker-2">🚶</div>
+          <div class="warehouse-cat">🐈</div>
 
-        <!-- JS fills in: BIN A–Z wall, shelf racks, virtual screens -->
+          <!-- JS fills in: BIN A–Z wall, shelf racks, virtual screens -->
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- 2D dashboard overlay -->
-  <header class="hud hud-top">
-    <div class="brand">🏭 <b>LP&nbsp;WAREHOUSE</b></div>
-    <nav class="steps" id="steps">
-      <button class="step-chip active" data-step="overview">🌐 Overview</button>
-      <button class="step-chip" data-step="receiving"><i>1</i> 🚚 Receiving</button>
-      <button class="step-chip" data-step="inventory"><i>2</i> 🗄️ Inventory</button>
-      <button class="step-chip" data-step="studio"><i>3</i> 🎬 Studio</button>
-      <button class="step-chip" data-step="marketplace"><i>4</i> 🏪 Marketplace</button>
-    </nav>
-    <button class="tour-btn" id="tourBtn" title="Auto-tour (Space)">▶ Tour</button>
-  </header>
+    <!-- 2D dashboard overlay -->
+    <header class="hud hud-top">
+      <div class="brand">🏭 <b>LP&nbsp;WAREHOUSE</b></div>
+      <nav class="steps" id="steps">
+        <button class="step-chip active"
+          data-step="overview">🌐 Overview</button>
+        <button class="step-chip"
+          data-step="receiving"><i>1</i> 🚚 Receiving</button>
+        <button class="step-chip"
+          data-step="inventory"><i>2</i> 🗄️ Inventory</button>
+        <button class="step-chip" data-step="studio"><i>3</i> 🎬 Studio</button>
+        <button class="step-chip"
+          data-step="marketplace"><i>4</i> 🏪 Marketplace</button>
+      </nav>
+      <button class="tour-btn" id="tourBtn"
+        title="Auto-tour (Space)">▶ Tour</button>
+    </header>
 
-  <aside class="hud hud-info" id="infoCard">
-    <h2 id="infoTitle">Warehouse overview</h2>
-    <p id="infoBody">Follow a sample through the building: receiving bins, inventory
+    <aside class="hud hud-info" id="infoCard">
+      <h2 id="infoTitle">Warehouse overview</h2>
+      <p
+        id="infoBody">Follow a sample through the building: receiving bins, inventory
       aisles, the fulfillment studio and the marketplace kiosk. Use the steps above,
       arrow keys, or click anything in the scene.</p>
-    <div class="info-apps" id="infoApps"></div>
-    <div class="info-stats" id="infoStats"></div>
-  </aside>
+      <div class="info-apps" id="infoApps"></div>
+      <div class="info-stats" id="infoStats"></div>
+    </aside>
 
-  <footer class="hud hud-controls">
-    <label>🧭 <input type="range" id="rotateSlider" min="-80" max="20" value="-38"></label>
-    <label>🔎 <input type="range" id="zoomSlider" min="-320" max="420" value="0"></label>
-  </footer>
+    <footer class="hud hud-controls">
+      <label>🧭 <input type="range" id="rotateSlider" min="-80" max="20" value="-38"></label>
+      <label>🔎 <input type="range" id="zoomSlider" min="-320" max="420" value="0"></label>
+    </footer>
 
-  <div class="hud standalone-note" id="standaloneNote" hidden>
+    <div class="hud standalone-note" id="standaloneNote" hidden>
     Running standalone — open inside LP-OS to auto-launch apps on the desktop.
   </div>
 
-  <script src="/warehouse.js"></script>
-</body>
+    <script src="/warehouse.js"></script>
+  </body>
 </html>

@@ -50,10 +50,10 @@ rather than falling through to slower tooling.
 
 - **In LP-OS:** open **Demos → Samples-Import** (the registered app), or **Apps
   → Install Extension** for the install window.
-- **With the merged extension installed:** the extension adds its scrape
-  button on TikTok pages; Samples-Import still opens as the page above. The
-  extension is what makes order/seller scrapes flow to LP-OS's Graylog store
-  (and stamps `_creator` on order scrapes).
+- **With the merged extension installed:** the extension adds its scrape button
+  on TikTok pages; Samples-Import still opens as the page above. The extension
+  is what makes order/seller scrapes flow to LP-OS's Graylog store (and stamps
+  `_creator` on order scrapes).
 
 ## Install the extension (load unpacked from the repo)
 
@@ -61,10 +61,10 @@ Surface the install help as an **LP-OS window** (Apps → Install Extension) or,
 via the browser skill, `navigate` to
 `${LPOS_API_URL:-http://localhost:8000}/install`. That page walks:
 
-1. **Locate** the `extension/` folder in the lp-os repo checkout (clone the
-   repo if the user doesn't have one — no zip is published yet).
-2. Open `chrome://extensions` → enable **Developer mode** → **Load unpacked**
-   → pick the `extension/` folder.
+1. **Locate** the `extension/` folder in the lp-os repo checkout (clone the repo
+   if the user doesn't have one — no zip is published yet).
+2. Open `chrome://extensions` → enable **Developer mode** → **Load unpacked** →
+   pick the `extension/` folder.
 
 **CRX caveat — be explicit:** Chrome blocks `.crx` installs from outside the Web
 Store for normal profiles, so there is **no `.crx`** to "install" directly; the

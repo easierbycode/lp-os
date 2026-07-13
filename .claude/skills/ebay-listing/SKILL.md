@@ -31,8 +31,8 @@ The product to list, ideally already on hand from the import/lifecycle context:
 `name` (→ title), a `retail`/MSRP price (the TikTok price — the pricing input,
 NOT the Buy-It-Now directly), condition (default **New** — these are fresh
 samples), `description`, an `image` URL, and the `productId`. If you only have a
-`productId` / PDP url, hydrate first via `…__v1_tiktok_product` (LP-OS serves
-no `/api/product-lookup/:id` — that data-pimp route was not ported) for the
+`productId` / PDP url, hydrate first via `…__v1_tiktok_product` (LP-OS serves no
+`/api/product-lookup/:id` — that data-pimp route was not ported) for the
 title/price/image. The **Buy-It-Now price is computed by the pricing formula**
 (see Pricing below), not taken raw.
 
@@ -77,16 +77,16 @@ The Buy-It-Now price comes from the eBay pricing formula
 (`packages/marketplace/ebay-pricing.ts`, ported verbatim from data-pimp),
 exposed as `GET|POST /api/ebay-price` on the LP-OS shell.
 
-> **autoComps caveat.** LP-OS did not port data-pimp's live-eBay comps
-> scraper, so against LP-OS `autoComps=1` returns `compsSource: "none"` and
-> the formula anchors on retail — pass explicit `comps=` for market-aware
-> pricing. The `https://thirsty.store` default works before the domain
-> cutover (data-pimp) and after it (LP-OS); set `EBAY_PRICE_API_URL` to
-> `http://localhost:8000` to hit a local shell.
+> **autoComps caveat.** LP-OS did not port data-pimp's live-eBay comps scraper,
+> so against LP-OS `autoComps=1` returns `compsSource: "none"` and the formula
+> anchors on retail — pass explicit `comps=` for market-aware pricing. The
+> `https://thirsty.store` default works before the domain cutover (data-pimp)
+> and after it (LP-OS); set `EBAY_PRICE_API_URL` to `http://localhost:8000` to
+> hit a local shell.
 
-It undercuts the cheapest **credible** competitor, marks down the longer a
-unit sits, and never drops below a fee-aware floor (so a listing never loses
-money after eBay's ~13.25% + $0.30). Call it, e.g.:
+It undercuts the cheapest **credible** competitor, marks down the longer a unit
+sits, and never drops below a fee-aware floor (so a listing never loses money
+after eBay's ~13.25% + $0.30). Call it, e.g.:
 
 ```
 GET ${EBAY_PRICE_API_URL:-https://thirsty.store}/api/ebay-price?retail=89.99&costBasis=0&condition=new&comps=58,62,65
@@ -99,9 +99,9 @@ If the endpoint is unreachable, compute the core of the formula inline as a
 fallback (defaults from data-pimp `core/ebay-pricing.ts`): anchor = cheapest
 credible comp; with no comps, anchor = retail × 0.30. Undercut the anchor by
 max(5%, $1.00) (one comp only → gentler max(3%, $0.50)). Fee-aware floor =
-(costBasis + shipping + $0.30) / (1 − 0.1325), minimum $1.00 — never price
-below it. Land on a charm `.99` ending. Say clearly that the local fallback
-was used instead of the endpoint.
+(costBasis + shipping + $0.30) / (1 − 0.1325), minimum $1.00 — never price below
+it. Land on a charm `.99` ending. Say clearly that the local fallback was used
+instead of the endpoint.
 
 It returns `price` (the charm-`.99` Buy-It-Now to fill), plus `floor`, `anchor`,
 `netAtPrice`, `undercutFromAnchor`, `floorHit`, a one-line `explanation`, and a

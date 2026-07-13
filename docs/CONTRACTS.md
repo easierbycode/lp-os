@@ -28,21 +28,20 @@ lp-os/
 `apps/member` is npm/Vite-driven (mirroring tiktok-sample-tracker) and is NOT a
 member of the root `workspace` array — Deno warns and ignores the parent config
 when running there. npm owns its `node_modules` locally (`npm ci`; the Deploy
-builder may use `deno install --allow-scripts` there instead) and it is
-excluded from root fmt/lint. It builds with `kit.paths.base = "/member"` into
+builder may use `deno install --allow-scripts` there instead) and it is excluded
+from root fmt/lint. It builds with `kit.paths.base = "/member"` into
 `apps/member/.deno-deploy` (post-processed by `scripts/patch-deploy.mjs`, which
 fails the build loudly if the adapter output changes shape); the shell mounts
 the generated handler at `/member`. The built server's bare npm specifiers
 (`@sveltejs/kit`(+`/internal/server`), `clsx`, `cookie`, `devalue`,
-`set-cookie-parser`) resolve through the ROOT `deno.json` import map at
-runtime — those pins are EXACT and must move in lockstep with
-`apps/member/package.json` (Kit's `internal` server API makes build/runtime
-version skew a real hazard). Its own `deno.json` import map carries the same
-pins plus `node:` builtins (needed by `deno desktop`; see
-`docs/DISTRIBUTION.md`). Root task `build:deploy` = member build then shell
-build. Cross-package Deno imports use the workspace names `@lp-os/db`,
-`@lp-os/relay`, `@lp-os/graylog`, `@lp-os/lifecycle` (already pinned in each
-package's `deno.json`).
+`set-cookie-parser`) resolve through the ROOT `deno.json` import map at runtime
+— those pins are EXACT and must move in lockstep with `apps/member/package.json`
+(Kit's `internal` server API makes build/runtime version skew a real hazard).
+Its own `deno.json` import map carries the same pins plus `node:` builtins
+(needed by `deno desktop`; see `docs/DISTRIBUTION.md`). Root task `build:deploy`
+= member build then shell build. Cross-package Deno imports use the workspace
+names `@lp-os/db`, `@lp-os/relay`, `@lp-os/graylog`, `@lp-os/lifecycle` (already
+pinned in each package's `deno.json`).
 
 ## Environment variables (the complete set)
 
@@ -54,8 +53,8 @@ package's `deno.json`).
 - `SCAN_RELAY_ORIGINS` — comma-separated extra allowed WS origins; localhost
   always allowed.
 - `SCAN_RELAY_TOKEN` — optional WS token fallback (`?scanToken=`).
-- `MEMBER_APP_URL` — optional override for where apps/member is served:
-  an absolute URL (split deploy) or a "/"-prefixed same-origin path. Default:
+- `MEMBER_APP_URL` — optional override for where apps/member is served: an
+  absolute URL (split deploy) or a "/"-prefixed same-origin path. Default:
   same-origin `/member`, served by the shell from `apps/member/.deno-deploy`;
   falls back to `http://localhost:8080/member` when the member build is absent
   (`deno task dev:member`). Used by the shell FOLDERS config (Member/App).
@@ -64,13 +63,13 @@ package's `deno.json`).
 - `SCANNER_APP_URL`, `INVENTORY_APP_URL` — external app URLs for shell FOLDERS
   entries (defaults: current production URLs, e.g. `https://admin.thirsty.store`
   for inventory).
-- `EXTERNAL_API_<NAME>` (`SCRAPECREATORS` / `EBAY` / `BARCODELOOKUP`) —
-  `on|off` kill switches for outbound third-party APIs, layered above
-  key/credential gating (off wins even with a key set; disabled routes return
-  503 `{ok:false, error:"<name> disabled"}`). Defaults live in
-  `apps/shell/core/external-apis.ts`; `barcodelookup` defaults **off** (its
-  key expired 2026-07; the provider is pre-registered for the UPC-lookup
-  pipeline). `/health` and `/api/health` expose the states.
+- `EXTERNAL_API_<NAME>` (`SCRAPECREATORS` / `EBAY` / `BARCODELOOKUP`) — `on|off`
+  kill switches for outbound third-party APIs, layered above key/credential
+  gating (off wins even with a key set; disabled routes return 503
+  `{ok:false, error:"<name> disabled"}`). Defaults live in
+  `apps/shell/core/external-apis.ts`; `barcodelookup` defaults **off** (its key
+  expired 2026-07; the provider is pre-registered for the UPC-lookup pipeline).
+  `/health` and `/api/health` expose the states.
 
 ## Database (packages/db → `@lp-os/db`)
 
@@ -118,19 +117,20 @@ package's `deno.json`).
     per the Shell section.
   - `graylog_messages` — see Graylog section.
   - **Inventory Workbench additions (0003) [decided here]:** `samples` gains
-    `version int NOT NULL DEFAULT 1` + `updated_at timestamptz NOT NULL
-    DEFAULT now()`, bumped by the `samples_touch_version` BEFORE UPDATE
-    trigger for EVERY writer (including the external tracker); `transactions`
-    gains `batch_id uuid`, `request_id uuid`, `changes jsonb` (before/after
-    audit payload); new `inventory_batches(batch_id uuid PK, request_id uuid
+    `version int NOT NULL DEFAULT 1` +
+    `updated_at timestamptz NOT NULL
+    DEFAULT now()`, bumped by the
+    `samples_touch_version` BEFORE UPDATE trigger for EVERY writer (including
+    the external tracker); `transactions` gains `batch_id uuid`,
+    `request_id uuid`, `changes jsonb` (before/after audit payload); new
+    `inventory_batches(batch_id uuid PK, request_id uuid
     UNIQUE NOT NULL, operator text NOT NULL, mutation_count int NOT NULL,
-    result jsonb, created_at timestamptz NOT NULL DEFAULT now())` — the
-    idempotency anchor for `PATCH /api/samples/bulk` (a replayed request_id
-    returns the stored result, never reapplies).
+    result jsonb, created_at timestamptz NOT NULL DEFAULT now())`
+    — the idempotency anchor for `PATCH /api/samples/bulk` (a replayed
+    request_id returns the stored result, never reapplies).
   - Indexes: samples(qr_code), samples(bundle_id), samples(status),
     samples(sold_to), GIN samples(related_upc), bundles(qr_code),
-    transactions(sample_id), transactions(created_at),
-    transactions(batch_id).
+    transactions(sample_id), transactions(created_at), transactions(batch_id).
 - Module API (`mod.ts` exports — exact signatures):
   ```ts
   export function getPool(): Pool; // lazy singleton from DATABASE_URL
@@ -154,13 +154,17 @@ package's `deno.json`).
   export const Transactions: TableApi; // maps to table "transactions"
   export function ensureSchema(): Promise<void>; // idempotent; mirrors migrations (CREATE/ALTER IF NOT EXISTS)
   // Inventory Workbench (packages/db/inventory.ts, re-exported):
-  export function applyInventoryBatch(body: unknown): Promise<InventoryBatchOutcome>;
+  export function applyInventoryBatch(
+    body: unknown,
+  ): Promise<InventoryBatchOutcome>;
   //   validate → one PoolClient txn: FOR UPDATE (id order) → version checks →
   //   bundle validation → per-sample UPDATE + audit transactions row →
   //   inventory_batches record → COMMIT. All-or-nothing; idempotent by
   //   requestId; throws InventoryBatchError{kind: "validation"|"not_found"|
   //   "conflict"} for the route to map to 400/404/409.
-  export function lookupSamplesByCode(code: string): Promise<{ code; samples; bundles }>;
+  export function lookupSamplesByCode(
+    code: string,
+  ): Promise<{ code; samples; bundles }>;
   //   every sample matching qr_code OR related_upc, plus bundles by qr_code.
   ```
   Internals follow data-pimp's proven pattern: column cache from
@@ -295,7 +299,9 @@ export interface Lifecycle {
   recordAgencyIntake(input: AgencyIntakeInput): Promise<AgencyIntakeResult>;
   recordSampleAssignment(input: AssignmentInput): Promise<AssignmentResult>;
   recordSampleImport(input: ImportInput): Promise<ImportResult>;
-  recordBulkSampleEdit(input: BulkSampleEditInput): Promise<BulkSampleEditResult>;
+  recordBulkSampleEdit(
+    input: BulkSampleEditInput,
+  ): Promise<BulkSampleEditResult>;
   listSampleStatuses(): SampleStatusEntry[];
 }
 ```
@@ -304,12 +310,12 @@ export interface Lifecycle {
   the injected optional `deps.inventory: InventoryWriter` (wired to
   `@lp-os/db applyInventoryBatch`); this layer validates the status vocabulary
   (rejects `sold` → sold flow, rejects badge values) and, AFTER the commit,
-  emits per-sample events best-effort: `sample_assignment_json` for
-  assignments, `sample_status_json` for status changes,
-  `sample_inventory_edit_json` (new field) for location/bundle/quantity/price/
-  fire_sale/notes edits — all stamped with a shared flat `batch_id` and
-  `sample_source: "workbench-bulk-edit"`. Event failures become `warnings`,
-  never rollbacks. Replayed requests emit no events.
+  emits per-sample events best-effort: `sample_assignment_json` for assignments,
+  `sample_status_json` for status changes, `sample_inventory_edit_json` (new
+  field) for location/bundle/quantity/price/ fire_sale/notes edits — all stamped
+  with a shared flat `batch_id` and `sample_source: "workbench-bulk-edit"`.
+  Event failures become `warnings`, never rollbacks. Replayed requests emit no
+  events.
 
 - Graylog events go through `store.logEvent(shortMessage, fields)` (host/source
   `thirsty-store-kiosk` kept for continuity of existing queries **[decided
@@ -346,24 +352,25 @@ Routes:
 - `PATCH /api/samples/bulk?user=<id>` **[decided here]** — atomic Inventory
   Workbench bulk edit (CORS; registered before `/api/samples/:id`). Body
   `{ requestId: uuid, note?, mutations: [{ sampleId, expectedVersion,
-  patch }] }` with patch limited to status/location/checked_out_to/bundle_id/
+  patch }] }`
+  with patch limited to status/location/checked_out_to/bundle_id/
   quantity/current_price/fire_sale/notes; max 250 samples; all-or-nothing;
   idempotent by requestId; operator = server-resolved `?user=` (body labels
   never override). 400 invalid / 404 missing samples / 409 version conflict
-  (`details.conflicts`) / 200 `{ ok, batchId, requestId, replayed, rows,
-  changes, warnings, graylog, message }`. Assignment (nonempty
-  `checked_out_to`) derives `status=checked_out` + `checked_out_at`; explicit
-  `checked_out_to: null` is a check-in (clears assignee, stamps
-  `checked_in_at`); location-only edits never touch status; `sold` is
-  rejected toward the sold flow.
-- `GET /api/samples/lookup?code=` **[decided here]** — batch-scan lookup
-  (CORS): `{ code, samples, bundles }`, matching `qr_code` OR any
-  `related_upc` (all rows — units can share a retail barcode), bundles by
-  `qr_code`.
-- `GET /warehouse` — CSS-3D warehouse dashboard (static/warehouse.html);
-  walking its steps posts `{source:"lp-os-warehouse", type:"warehouse-step",
-  step}` to os.js, which opens the mapped apps and answers with
-  `warehouse-ack`.
+  (`details.conflicts`) / 200
+  `{ ok, batchId, requestId, replayed, rows,
+  changes, warnings, graylog, message }`.
+  Assignment (nonempty `checked_out_to`) derives `status=checked_out` +
+  `checked_out_at`; explicit `checked_out_to: null` is a check-in (clears
+  assignee, stamps `checked_in_at`); location-only edits never touch status;
+  `sold` is rejected toward the sold flow.
+- `GET /api/samples/lookup?code=` **[decided here]** — batch-scan lookup (CORS):
+  `{ code, samples, bundles }`, matching `qr_code` OR any `related_upc` (all
+  rows — units can share a retail barcode), bundles by `qr_code`.
+- `GET /warehouse` — CSS-3D warehouse dashboard (static/warehouse.html); walking
+  its steps posts `{source:"lp-os-warehouse", type:"warehouse-step",
+  step}` to
+  os.js, which opens the mapped apps and answers with `warehouse-ack`.
 - `POST /api/sample-status | sample-sold | sample-listing | sample-bulk-sold | agency-intake | sample-assign | sample-import`
   — thin wrappers over `@lp-os/lifecycle`.
 - `GET /api/sample-statuses`, `GET /api/creators`, `GET /api/roles` —
@@ -402,21 +409,22 @@ faithfully (rebrand "Thirsty OS" → "LP-OS"), then:
    `?workspace=samples-import` E2E block working.
 4. **Workbench batch-scan mode [decided here]:** the Inventory iframe posts
    `{source:"lp-os-inventory", type:"batch-scan-mode", enabled, sessionId}`
-   (origin must be `INVENTORY_ORIGIN` or same-origin, and `e.source` must be
-   the actual iframe of an open Inventory window). While enabled, `routeScan`
-   sends BOTH UPC/EAN and TikTok product-id scans to that specific window as
+   (origin must be `INVENTORY_ORIGIN` or same-origin, and `e.source` must be the
+   actual iframe of an open Inventory window). While enabled, `routeScan` sends
+   BOTH UPC/EAN and TikTok product-id scans to that specific window as
    `{source:"thirsty-os", type:"scan", kind, value, scanId, sessionId}` and
-   skips kiosk/intake routing and the graylog chase. Scanner presence fans in
-   as `{source:"thirsty-os", type:"scanner-presence", count, devices}` on
-   every presence change. Closing the window (or an `enabled:false` message)
-   restores default routing. Attribution: `openApp` appends
-   `?user=<currentUserId()>` to the Inventory and Warehouse iframe URLs.
-5. **Warehouse dashboard [decided here]:** `{source:"lp-os-warehouse",
-   type:"warehouse-step", step, sessionId}` (same-origin + source-window
-   check) opens/focuses the step's apps (receiving→Inventory `/scan`,
-   inventory→Inventory, studio→Samples-Import, marketplace→Kiosk +
-   Marketplace), tiles warehouse LEFT / primary app RIGHT, and answers
-   `{source:"thirsty-os", type:"warehouse-ack", step, opened}`.
+   skips kiosk/intake routing and the graylog chase. Scanner presence fans in as
+   `{source:"thirsty-os", type:"scanner-presence", count, devices}` on every
+   presence change. Closing the window (or an `enabled:false` message) restores
+   default routing. Attribution: `openApp` appends `?user=<currentUserId()>` to
+   the Inventory and Warehouse iframe URLs.
+5. **Warehouse dashboard [decided here]:**
+   `{source:"lp-os-warehouse",
+   type:"warehouse-step", step, sessionId}`
+   (same-origin + source-window check) opens/focuses the step's apps
+   (receiving→Inventory `/scan`, inventory→Inventory, studio→Samples-Import,
+   marketplace→Kiosk + Marketplace), tiles warehouse LEFT / primary app RIGHT,
+   and answers `{source:"thirsty-os", type:"warehouse-ack", step, opened}`.
 
 ### Roles config (apps/shell/core/roles.json + roles.ts)
 
@@ -540,40 +548,40 @@ derived. `roles.ts` mirrors flag logic server-side and exports
 Real marketplace listing of samples — eBay first of the initial three
 marketplaces. Post-phase-8 feature work; names fixed here.
 
-- Package `packages/marketplace` = `@lp-os/marketplace`, same
-  compile-standalone structural-deps pattern as `@lp-os/lifecycle`
+- Package `packages/marketplace` = `@lp-os/marketplace`, same compile-standalone
+  structural-deps pattern as `@lp-os/lifecycle`
   (`createListingService({db, store, lifecycle, getAccount, listAccounts})`).
   eBay adapter behind a `MarketplaceClient` interface
-  (`createEbayClient({environment, credentials, settings, fetchImpl?})`) —
-  Sell Inventory API flow: inventory_item → offer → publish, with merchant
-  location + business policies auto-provisioned on first use.
+  (`createEbayClient({environment, credentials, settings, fetchImpl?})`) — Sell
+  Inventory API flow: inventory_item → offer → publish, with merchant location +
+  business policies auto-provisioned on first use.
 - Tables (migration `0002_marketplace.sql`, mirrored in `ensureSchema()`):
   - `listings` — the Postgres truth for current listing status
-    (`pending → listed → ended|sold`, or `failed`); columns include
-    sample_id FK, marketplace, status, source (`manual|schedule|status-auto`),
-    sku (`lpos-<sampleId>`), offer_id, external_id (eBay listingId),
-    listing_url, ask_price, currency, creator, operator, error, listed_at.
-    Exported as `Listings: TableApi`; joined read
-    `listListingsWithSamples(filters, limit)`.
-  - `marketplace_accounts` — single-tenant per marketplace (login is mocked):
-    PK marketplace, environment (`sandbox|production`), credentials jsonb
-    (eBay: clientId/clientSecret/refreshToken/accessToken), settings jsonb
-    (location, defaultCreator, condition, shippingFlatCost, autoListScheduled,
-    autoListClearedToSell, autoListMaxPerPass, policy-id overrides).
-    Helpers: `getMarketplaceAccount` / `listMarketplaceAccounts` /
+    (`pending → listed → ended|sold`, or `failed`); columns include sample_id
+    FK, marketplace, status, source (`manual|schedule|status-auto`), sku
+    (`lpos-<sampleId>`), offer_id, external_id (eBay listingId), listing_url,
+    ask_price, currency, creator, operator, error, listed_at. Exported as
+    `Listings: TableApi`; joined read `listListingsWithSamples(filters, limit)`.
+  - `marketplace_accounts` — single-tenant per marketplace (login is mocked): PK
+    marketplace, environment (`sandbox|production`), credentials jsonb (eBay:
+    clientId/clientSecret/refreshToken/accessToken), settings jsonb (location,
+    defaultCreator, condition, shippingFlatCost, autoListScheduled,
+    autoListClearedToSell, autoListMaxPerPass, policy-id overrides). Helpers:
+    `getMarketplaceAccount` / `listMarketplaceAccounts` /
     `upsertMarketplaceAccount` / `deleteMarketplaceAccount`. Credential VALUES
-    never leave the server: API views expose key names only, and credentials
-    are never written to graylog_messages.
+    never leave the server: API views expose key names only, and credentials are
+    never written to graylog_messages.
 - Shell routes: `GET|POST /api/listings` (GET = joined status rows with
   `sample_id`/`marketplace`/`status`/`limit` filters; POST = on-demand publish,
   validation → 400 `{ok:false,error}`, remote publish failure → 200
   `{ok:false, error, listing}`), `POST /api/listings/run-due` (one auto-list
-  pass now), `GET /api/marketplaces`, `GET|POST|DELETE
-  /api/marketplaces/:marketplace` (POST merges credentials per-key + settings
-  shallow), `POST /api/marketplaces/:marketplace/verify` (live check, stamps
-  connected_at). Window page: `GET /marketplace` → `static/marketplace.html`
-  (FOLDERS app id `marketplace`, RBAC flag `app.marketplace` — admin via `*`,
-  warehouse true, creator denied).
+  pass now), `GET /api/marketplaces`,
+  `GET|POST|DELETE
+  /api/marketplaces/:marketplace` (POST merges credentials
+  per-key + settings shallow), `POST /api/marketplaces/:marketplace/verify`
+  (live check, stamps connected_at). Window page: `GET /marketplace` →
+  `static/marketplace.html` (FOLDERS app id `marketplace`, RBAC flag
+  `app.marketplace` — admin via `*`, warehouse true, creator denied).
 - Automatic listing = `startAutoLister` in-process interval in apps/shell boot
   (env `AUTO_LIST_INTERVAL_MS`, default 300000): each pass (a) fires due
   `fetchDueListingSchedules()` intents (success or permanent failure →
@@ -584,8 +592,8 @@ marketplaces. Post-phase-8 feature work; names fixed here.
   `*_json` container + flat scalars): success reuses `recordSampleListing`'s
   `sample_event:"listed"` shape with additive fields `listing_id`,
   `external_listing_id` and `sample_source` tokens `marketplace-api` (manual) /
-  `marketplace-cron` (schedule) / `marketplace-auto` (status-auto); failures
-  are `sample_event:"listing_failed"` with `listing_error_json` — so
+  `marketplace-cron` (schedule) / `marketplace-auto` (status-auto); failures are
+  `sample_event:"listing_failed"` with `listing_error_json` — so
   `sample_event:listed` never matches failures and existing skill queries are
   unchanged.
 - Env vars added to the complete set: `AUTO_LIST_INTERVAL_MS` (optional,
@@ -603,8 +611,8 @@ Seven skills: `ebay-listing`, `sample-e2e`, `sample-lifecycle`,
 - URL updates: `https://thirsty.store` →
   `${LPOS_API_URL:-http://localhost:8000}`; `https://admin.thirsty.store` stays
   for now (tracker not yet migrated); each SKILL.md names
-  `https://thirsty.store` as LP-OS's production domain (decided at the
-  2026-07 changeover — LP-OS replaced data-pimp behind it).
+  `https://thirsty.store` as LP-OS's production domain (decided at the 2026-07
+  changeover — LP-OS replaced data-pimp behind it).
 - `graylog-query` rewrite: same triggers/purpose; script becomes
   `scripts/graylog_query.ts` (Deno) that (a) default mode: queries Postgres
   directly via `@lp-os/graylog`'s parser + `DATABASE_URL`, (b) `--url` mode:

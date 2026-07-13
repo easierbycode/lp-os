@@ -133,8 +133,8 @@ Since the eBay API integration, real-API listings add `listing_id` /
 `external_listing_id` flat fields and `sample_source` values `marketplace-api`,
 `marketplace-cron`, `marketplace-auto`; publish failures are
 `sample_event:listing_failed` with a `listing_error_json` blob (so
-`sample_event:listed` still means success only). Current listing STATUS lives
-in Postgres (`GET /api/listings`); Graylog holds the history.
+`sample_event:listed` still means success only). Current listing STATUS lives in
+Postgres (`GET /api/listings`); Graylog holds the history.
 
 ---
 

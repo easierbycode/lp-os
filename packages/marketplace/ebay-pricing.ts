@@ -193,12 +193,20 @@ function normalizeSchedule(
   let rungs: MarkdownRung[] = [];
   if (Array.isArray(input)) {
     rungs = input
-      .map((r) => [num(r?.[0]), num(r?.[1])] as [number | undefined, number | undefined])
-      .filter((r): r is MarkdownRung => r[0] !== undefined && r[1] !== undefined);
+      .map((r) =>
+        [num(r?.[0]), num(r?.[1])] as [number | undefined, number | undefined]
+      )
+      .filter((r): r is MarkdownRung =>
+        r[0] !== undefined && r[1] !== undefined
+      );
   } else if (input && typeof input === "object") {
     rungs = Object.entries(input)
-      .map(([k, v]) => [num(k), num(v)] as [number | undefined, number | undefined])
-      .filter((r): r is MarkdownRung => r[0] !== undefined && r[1] !== undefined);
+      .map(([k, v]) =>
+        [num(k), num(v)] as [number | undefined, number | undefined]
+      )
+      .filter((r): r is MarkdownRung =>
+        r[0] !== undefined && r[1] !== undefined
+      );
   }
   rungs = rungs
     .filter(([day, factor]) => day >= 0 && factor > 0)
@@ -251,31 +259,88 @@ function stageLabel(age: number, schedule: MarkdownRung[]): string {
 // Load the effective params for a run, applying defaults and clamping the fee
 // fraction so the gross-up denominator (1 - feePct) can never be <= 0.
 export function resolveParams(input: EbayPriceInput = {}): EbayPricingParams {
-  const feePct = Math.min(0.9, Math.max(0, numOr(input.feePct, DEFAULT_EBAY_PRICING.feePct)));
+  const feePct = Math.min(
+    0.9,
+    Math.max(0, numOr(input.feePct, DEFAULT_EBAY_PRICING.feePct)),
+  );
   return {
     feePct,
     fixedFee: Math.max(0, numOr(input.fixedFee, DEFAULT_EBAY_PRICING.fixedFee)),
     shipping: Math.max(0, numOr(input.shipping, DEFAULT_EBAY_PRICING.shipping)),
-    minMarginAbs: Math.max(0, numOr(input.minMarginAbs, DEFAULT_EBAY_PRICING.minMarginAbs)),
-    minMarginPct: Math.max(0, numOr(input.minMarginPct, DEFAULT_EBAY_PRICING.minMarginPct)),
-    minListPrice: Math.max(0.01, numOr(input.minListPrice, DEFAULT_EBAY_PRICING.minListPrice)),
-    retailAnchorRate: Math.max(0, numOr(input.retailAnchorRate, DEFAULT_EBAY_PRICING.retailAnchorRate)),
-    undercutPct: Math.max(0, numOr(input.undercutPct, DEFAULT_EBAY_PRICING.undercutPct)),
-    undercutAbs: Math.max(0, numOr(input.undercutAbs, DEFAULT_EBAY_PRICING.undercutAbs)),
-    gentleUndercutPct: Math.max(0, numOr(input.gentleUndercutPct, DEFAULT_EBAY_PRICING.gentleUndercutPct)),
-    gentleUndercutAbs: Math.max(0, numOr(input.gentleUndercutAbs, DEFAULT_EBAY_PRICING.gentleUndercutAbs)),
-    trimFrac: Math.min(0.9, Math.max(0, numOr(input.trimFrac, DEFAULT_EBAY_PRICING.trimFrac))),
-    medianFloorFrac: Math.max(0, numOr(input.medianFloorFrac, DEFAULT_EBAY_PRICING.medianFloorFrac)),
-    absurdHighMult: Math.max(1, numOr(input.absurdHighMult, DEFAULT_EBAY_PRICING.absurdHighMult)),
-    absurdLowMult: Math.max(0, numOr(input.absurdLowMult, DEFAULT_EBAY_PRICING.absurdLowMult)),
+    minMarginAbs: Math.max(
+      0,
+      numOr(input.minMarginAbs, DEFAULT_EBAY_PRICING.minMarginAbs),
+    ),
+    minMarginPct: Math.max(
+      0,
+      numOr(input.minMarginPct, DEFAULT_EBAY_PRICING.minMarginPct),
+    ),
+    minListPrice: Math.max(
+      0.01,
+      numOr(input.minListPrice, DEFAULT_EBAY_PRICING.minListPrice),
+    ),
+    retailAnchorRate: Math.max(
+      0,
+      numOr(input.retailAnchorRate, DEFAULT_EBAY_PRICING.retailAnchorRate),
+    ),
+    undercutPct: Math.max(
+      0,
+      numOr(input.undercutPct, DEFAULT_EBAY_PRICING.undercutPct),
+    ),
+    undercutAbs: Math.max(
+      0,
+      numOr(input.undercutAbs, DEFAULT_EBAY_PRICING.undercutAbs),
+    ),
+    gentleUndercutPct: Math.max(
+      0,
+      numOr(input.gentleUndercutPct, DEFAULT_EBAY_PRICING.gentleUndercutPct),
+    ),
+    gentleUndercutAbs: Math.max(
+      0,
+      numOr(input.gentleUndercutAbs, DEFAULT_EBAY_PRICING.gentleUndercutAbs),
+    ),
+    trimFrac: Math.min(
+      0.9,
+      Math.max(0, numOr(input.trimFrac, DEFAULT_EBAY_PRICING.trimFrac)),
+    ),
+    medianFloorFrac: Math.max(
+      0,
+      numOr(input.medianFloorFrac, DEFAULT_EBAY_PRICING.medianFloorFrac),
+    ),
+    absurdHighMult: Math.max(
+      1,
+      numOr(input.absurdHighMult, DEFAULT_EBAY_PRICING.absurdHighMult),
+    ),
+    absurdLowMult: Math.max(
+      0,
+      numOr(input.absurdLowMult, DEFAULT_EBAY_PRICING.absurdLowMult),
+    ),
     // Capped at 1: a used haircut only ever REDUCES the anchor — a value > 1
     // would raise a comp anchor and could price us above the cheapest comp
     // (same reasoning as the markdown-factor cap in normalizeSchedule).
-    usedMult: Math.min(1, Math.max(0, numOr(input.usedMult, DEFAULT_EBAY_PRICING.usedMult))),
-    newCeilingRate: Math.max(0, numOr(input.newCeilingRate, DEFAULT_EBAY_PRICING.newCeilingRate)),
-    usedCeilingRate: Math.max(0, numOr(input.usedCeilingRate, DEFAULT_EBAY_PRICING.usedCeilingRate)),
-    noRetailCeilingMult: Math.max(1, numOr(input.noRetailCeilingMult, DEFAULT_EBAY_PRICING.noRetailCeilingMult)),
-    charmCents: Math.min(0.99, Math.max(0, numOr(input.charmCents, DEFAULT_EBAY_PRICING.charmCents))),
+    usedMult: Math.min(
+      1,
+      Math.max(0, numOr(input.usedMult, DEFAULT_EBAY_PRICING.usedMult)),
+    ),
+    newCeilingRate: Math.max(
+      0,
+      numOr(input.newCeilingRate, DEFAULT_EBAY_PRICING.newCeilingRate),
+    ),
+    usedCeilingRate: Math.max(
+      0,
+      numOr(input.usedCeilingRate, DEFAULT_EBAY_PRICING.usedCeilingRate),
+    ),
+    noRetailCeilingMult: Math.max(
+      1,
+      numOr(
+        input.noRetailCeilingMult,
+        DEFAULT_EBAY_PRICING.noRetailCeilingMult,
+      ),
+    ),
+    charmCents: Math.min(
+      0.99,
+      Math.max(0, numOr(input.charmCents, DEFAULT_EBAY_PRICING.charmCents)),
+    ),
     markdownSchedule: normalizeSchedule(input.markdownSchedule),
   };
 }
@@ -292,14 +357,15 @@ export function computeEbayPrice(input: EbayPriceInput = {}): EbayPriceResult {
 
   // ---- STEP 0 — SANITIZE ---------------------------------------------------
   const retailRaw = num(input.retail);
-  const retail = retailRaw !== undefined && retailRaw > 0 ? retailRaw : undefined;
+  const retail = retailRaw !== undefined && retailRaw > 0
+    ? retailRaw
+    : undefined;
   const costBasis = (() => {
     const c = num(input.costBasis);
     return c !== undefined && c > 0 ? c : 0;
   })();
-  const condition: EbayCondition = String(input.condition ?? "").toLowerCase() === "used"
-    ? "used"
-    : "new";
+  const condition: EbayCondition =
+    String(input.condition ?? "").toLowerCase() === "used" ? "used" : "new";
   const daysListed = (() => {
     const d = num(input.daysListed);
     return d !== undefined && d > 0 ? Math.floor(d) : 0;
@@ -378,19 +444,23 @@ export function computeEbayPrice(input: EbayPriceInput = {}): EbayPriceResult {
     : undefined;
 
   // ---- STEP 6 — FEE-AWARE FLOOR (the load-bearing clamp) --------------------
-  const requiredNet = costBasis + Math.max(p.minMarginAbs, costBasis * p.minMarginPct);
+  const requiredNet = costBasis +
+    Math.max(p.minMarginAbs, costBasis * p.minMarginPct);
   const floorRaw = (requiredNet + p.shipping + p.fixedFee) / (1 - p.feePct);
   const absoluteFloor = round2(Math.max(floorRaw, p.minListPrice));
   let candidate = priceAfterVelocity !== undefined
     ? Math.max(priceAfterVelocity, absoluteFloor)
     : absoluteFloor;
-  const floorHit = priceAfterVelocity === undefined || priceAfterVelocity < absoluteFloor;
+  const floorHit = priceAfterVelocity === undefined ||
+    priceAfterVelocity < absoluteFloor;
 
   // ---- STEP 7 — CEILING ----------------------------------------------------
   let ceiling: number;
   let unprofitableBelowRetail = false;
   if (retail !== undefined) {
-    const ceilingRate = condition === "used" ? p.usedCeilingRate : p.newCeilingRate;
+    const ceilingRate = condition === "used"
+      ? p.usedCeilingRate
+      : p.newCeilingRate;
     ceiling = round2(retail * ceilingRate);
     if (ceiling < absoluteFloor) {
       // Cost basis so high we can't sell under retail without a loss — floor
@@ -424,7 +494,9 @@ export function computeEbayPrice(input: EbayPriceInput = {}): EbayPriceResult {
   if (!Number.isFinite(finalPrice) || finalPrice < absoluteFloor) {
     finalPrice = round2(Math.max(absoluteFloor, p.minListPrice));
   }
-  const netAtPrice = round2(finalPrice * (1 - p.feePct) - p.fixedFee - p.shipping - costBasis);
+  const netAtPrice = round2(
+    finalPrice * (1 - p.feePct) - p.fixedFee - p.shipping - costBasis,
+  );
 
   return {
     price: finalPrice,
@@ -444,7 +516,9 @@ export function computeEbayPrice(input: EbayPriceInput = {}): EbayPriceResult {
     // Gap to the market anchor we referenced. Positive = we're below it
     // (undercutting); negative = the floor forced us above the market (won't
     // sell at a loss); null = no anchor (floor-driven, no comps and no retail).
-    undercutFromAnchor: marketAnchor === undefined ? null : round2(marketAnchor - finalPrice),
+    undercutFromAnchor: marketAnchor === undefined
+      ? null
+      : round2(marketAnchor - finalPrice),
     explanation: explain({
       anchorSource,
       baseAnchor: marketAnchor,
@@ -476,21 +550,37 @@ function explain(o: {
   // floor force us at/above it (market is below our break-even)?
   const undercutting = anchor !== undefined && o.finalPrice < anchor;
   if (o.anchorSource === "comp") {
-    const which = o.lowConfidence ? "a single comp" : "the cheapest credible comp";
+    const which = o.lowConfidence
+      ? "a single comp"
+      : "the cheapest credible comp";
     const at = anchor !== undefined ? ` (~$${round2(anchor).toFixed(2)})` : "";
-    parts.push(undercutting ? `undercut ${which}${at}` : `${which}${at} is below our break-even`);
+    parts.push(
+      undercutting
+        ? `undercut ${which}${at}`
+        : `${which}${at} is below our break-even`,
+    );
   } else if (o.anchorSource === "retail") {
     parts.push("no comps — anchored off the retail resale band");
   } else {
     parts.push("no comps or retail — driven by the fee-aware floor");
   }
   // The used haircut only bites when there is an anchor to haircut.
-  if (o.condition === "used" && o.anchorSource !== "floor") parts.push("used haircut applied");
-  if (o.daysListed > 0 && o.ageFactor < 1) {
-    parts.push(`aged ${o.daysListed}d → ${Math.round((1 - o.ageFactor) * 100)}% velocity markdown`);
+  if (o.condition === "used" && o.anchorSource !== "floor") {
+    parts.push("used haircut applied");
   }
-  if (o.floorHit) parts.push("held at the break-even floor (won't list at a loss)");
-  if (o.unprofitableBelowRetail) parts.push("⚠ floor exceeds retail ceiling — bad cost basis");
+  if (o.daysListed > 0 && o.ageFactor < 1) {
+    parts.push(
+      `aged ${o.daysListed}d → ${
+        Math.round((1 - o.ageFactor) * 100)
+      }% velocity markdown`,
+    );
+  }
+  if (o.floorHit) {
+    parts.push("held at the break-even floor (won't list at a loss)");
+  }
+  if (o.unprofitableBelowRetail) {
+    parts.push("⚠ floor exceeds retail ceiling — bad cost basis");
+  }
   return `$${o.finalPrice.toFixed(2)}: ${parts.join(", ")}.`;
 }
 
@@ -505,10 +595,18 @@ export type MarkdownLadderRow = {
   stage: string;
 };
 
-export function markdownLadder(input: EbayPriceInput = {}): MarkdownLadderRow[] {
+export function markdownLadder(
+  input: EbayPriceInput = {},
+): MarkdownLadderRow[] {
   const schedule = normalizeSchedule(input.markdownSchedule);
   return schedule.map(([day]) => {
     const r = computeEbayPrice({ ...input, daysListed: day });
-    return { day, factor: r.ageFactor, price: r.price, floorHit: r.floorHit, stage: r.stage };
+    return {
+      day,
+      factor: r.ageFactor,
+      price: r.price,
+      floorHit: r.floorHit,
+      stage: r.stage,
+    };
   });
 }

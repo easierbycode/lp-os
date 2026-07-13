@@ -68,18 +68,18 @@ Analytics-only — written by `recordSampleListing`; it does **not** touch
 Postgres (a listing is intent-to-sell, not an inventory status). It marks the
 step between the content-GMV question and the resale-net question.
 
-| Field                 | Type        | Notes                                                                                       |
-| --------------------- | ----------- | ------------------------------------------------------------------------------------------- |
-| `sample_listing_json` | JSON string | `{productId, sampleId, name, creator, marketplace, askPrice, listingUrl?, listedAt, note?, listingId?, externalId?}` |
-| `creator`             | string      | attribution handle (same convention as Events 1–2)                                          |
-| `ask_price_num`       | number      | the listing/ask price — compare to the eventual `gmv_num`/`net_num`                         |
-| `marketplace`         | string      | `ebay` / `offerup` / `fbmarketplace` / …                                                    |
-| `product_id`          | string      | join key                                                                                    |
-| `sample_id`           | string      | Postgres id (when a row matched)                                                            |
-| `sample_event`        | string      | `listed` (flat, filterable)                                                                 |
+| Field                 | Type        | Notes                                                                                                                                                                       |
+| --------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample_listing_json` | JSON string | `{productId, sampleId, name, creator, marketplace, askPrice, listingUrl?, listedAt, note?, listingId?, externalId?}`                                                        |
+| `creator`             | string      | attribution handle (same convention as Events 1–2)                                                                                                                          |
+| `ask_price_num`       | number      | the listing/ask price — compare to the eventual `gmv_num`/`net_num`                                                                                                         |
+| `marketplace`         | string      | `ebay` / `offerup` / `fbmarketplace` / …                                                                                                                                    |
+| `product_id`          | string      | join key                                                                                                                                                                    |
+| `sample_id`           | string      | Postgres id (when a row matched)                                                                                                                                            |
+| `sample_event`        | string      | `listed` (flat, filterable)                                                                                                                                                 |
 | `sample_source`       | string      | `skill-listing` (manual note) · `marketplace-api` (on-demand real eBay publish) · `marketplace-cron` (scheduled auto-list) · `marketplace-auto` (listed on cleared_to_sell) |
-| `listing_id`          | string      | only on real-API listings: Postgres `listings.id` (the current-status row)                  |
-| `external_listing_id` | string      | only on real-API listings: marketplace-side id (eBay listingId)                             |
+| `listing_id`          | string      | only on real-API listings: Postgres `listings.id` (the current-status row)                                                                                                  |
+| `external_listing_id` | string      | only on real-API listings: marketplace-side id (eBay listingId)                                                                                                             |
 
 A `product_id` carrying a `sample_listing_json` with no later `sample_sold_json`
 is still on the market. Since the eBay API integration (`@lp-os/marketplace`),
@@ -95,13 +95,13 @@ Written by the marketplace listing service when a real publish attempt fails.
 Deliberately a SEPARATE `sample_event` so `sample_event:listed` never matches
 failures.
 
-| Field                | Type        | Notes                                                                                    |
-| -------------------- | ----------- | ---------------------------------------------------------------------------------------- |
+| Field                | Type        | Notes                                                                                                |
+| -------------------- | ----------- | ---------------------------------------------------------------------------------------------------- |
 | `listing_error_json` | JSON string | `{listingId, sampleId, productId, name, creator, marketplace, askPrice, error, permanent, failedAt}` |
-| `sample_event`       | string      | `listing_failed`                                                                          |
-| `sample_source`      | string      | `marketplace-api` / `marketplace-cron` / `marketplace-auto`                               |
-| `listing_id`         | string      | Postgres `listings.id` (row is `status:'failed'` with the same error)                     |
-| plus                 |             | the usual flat `creator` / `marketplace` / `ask_price_num` / `product_id` / `sample_id`   |
+| `sample_event`       | string      | `listing_failed`                                                                                     |
+| `sample_source`      | string      | `marketplace-api` / `marketplace-cron` / `marketplace-auto`                                          |
+| `listing_id`         | string      | Postgres `listings.id` (row is `status:'failed'` with the same error)                                |
+| plus                 |             | the usual flat `creator` / `marketplace` / `ask_price_num` / `product_id` / `sample_id`              |
 
 ## Event 4 — agency intake (bulk lot → bucket)
 

@@ -22,26 +22,26 @@ either or both for whatever the user is verifying.
 > carried into LP-OS (there is no `apps/shell/scripts/sample-e2e.ts`), and
 > neither have the `/api/product-lookup/:id` (hydrate) and
 > `/api/product-creators` (order-scrape dropdown verify) routes it exercised —
-> both 404 on the LP-OS shell. Until the port lands, run the walk below
-> directly against the LP-OS API with curl/Bash and report each step's result.
+> both 404 on the LP-OS shell. Until the port lands, run the walk below directly
+> against the LP-OS API with curl/Bash and report each step's result.
 
 Per product id, against `${LPOS_API_URL:-http://localhost:8000}`:
 
 1. **import** — `POST /api/sample-import` with JSON
    `{"productId":"<id>","name":"<name>","price":<num|omit>,"creator":"@e2e-test"}`
-   → expect `ok:true`, a `sampleId`, `graylog:true`, and the creator echoed.
-   (A missing `price` exercises the unpriced path.)
+   → expect `ok:true`, a `sampleId`, `graylog:true`, and the creator echoed. (A
+   missing `price` exercises the unpriced path.)
 2. **verify Postgres** — `GET /api/samples?qr_code=<id>` → the new row has
    `status=checked_out` and `checked_out_to=@e2e-test`.
 3. **verify Graylog** — the import response's `graylog:true`, plus
    `GET /api/creators` → `@e2e-test` appears (the `creator:*` sweep reads the
    assignment event back from the message store).
-4. **cleanup (optional)** — `DELETE /api/samples/:id` per created row (leave
-   the rows when the user wants to inspect them in Inventory).
+4. **cleanup (optional)** — `DELETE /api/samples/:id` per created row (leave the
+   rows when the user wants to inspect them in Inventory).
 
 The hydrate step (PRICED vs unpriced report from a live TikTok lookup) and the
-order-scrape → creator-dropdown verify have **no LP-OS equivalent yet** — say
-so rather than improvising a substitute. The order-detail **scraper transform**
+order-scrape → creator-dropdown verify have **no LP-OS equivalent yet** — say so
+rather than improvising a substitute. The order-detail **scraper transform**
 test (runs the real `scrape-order.js` against a fake order page) lives in
 tok-scrape: `extension-seller/test-order-scrape.mjs` (`deno run -A`).
 
@@ -64,8 +64,7 @@ to that URL. (Without `autostart=1` it just prefills, so the user clicks Start.)
 1. Run Part 1 with the user's product ids (skip cleanup so the rows persist).
 2. Open Part 2 with the same `ids`/`creator` so the user sees the adds land and
    can inspect/edit them in the Inventory table.
-3. Offer cleanup (`DELETE /api/samples/:id`, or delete via Inventory) when
-   done.
+3. Offer cleanup (`DELETE /api/samples/:id`, or delete via Inventory) when done.
 
 ## Guardrails
 

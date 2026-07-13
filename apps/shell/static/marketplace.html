@@ -497,224 +497,234 @@
         class="sub">List samples for sale on eBay — the first of the initial three marketplaces. Credentials stay on this LP-OS server (Postgres), are never shown back whole, and are never written to the event log.</p>
 
       <div id="cards">
-      <div class="card" data-card="connection">
-        <div class="card-hd">
-          <button class="card-grip" draggable="true" title="Drag to reorder"
-            aria-label="Drag to reorder">⠿</button>
-          <h2><button class="card-toggle" aria-expanded="true"><span
+        <div class="card" data-card="connection">
+          <div class="card-hd">
+            <button class="card-grip" draggable="true" title="Drag to reorder"
+              aria-label="Drag to reorder">⠿</button>
+            <h2><button class="card-toggle" aria-expanded="true"><span
                 class="card-chevron" aria-hidden="true">▾</span>eBay connection <span id="env-chip" class="chip"><span class="dot"></span><span id="env-text">sandbox</span></span></button></h2>
-          <span class="spacer"></span>
-          <span class="card-ctl">
-            <button class="card-up" title="Move up" aria-label="Move up">↑</button>
-            <button class="card-down" title="Move down" aria-label="Move down">↓</button>
-          </span>
-        </div>
-        <div class="card-body">
-        <div class="row">
-          <div>
-            <label for="environment">Environment</label>
-            <select id="environment">
-              <option value="sandbox">Sandbox (test)</option>
-              <option value="production">Production (real listings)</option>
-            </select>
-          </div>
-          <div>
-            <label for="clientId">Client ID (App ID)</label>
-            <input id="clientId" autocomplete="off" spellcheck="false"
-              placeholder="e.g. LPOS-…-PRD-…" />
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label for="clientSecret">Client Secret (Cert ID)</label>
-            <input id="clientSecret" type="password" autocomplete="off"
-              placeholder="saved value kept unless replaced" />
-          </div>
-          <div>
-            <label for="refreshToken">Refresh token (~18 months)</label>
-            <input id="refreshToken" type="password" autocomplete="off"
-              placeholder="v^1.1#i^1#r^1…" />
-          </div>
-        </div>
-        <label
-          for="accessToken">Access token (optional — 2-hour token for a quick test; the refresh token is the durable path)</label>
-        <input id="accessToken" type="password" autocomplete="off"
-          placeholder="v^1.1#i^1#p^3…" />
-        <p class="muted" id="saved-keys" style="margin:8px 0 0"></p>
-        <details>
-          <summary>Where do these come from?</summary>
-          <ol>
-            <li>Create a (free) developer account at <code>developer.ebay.com</code> and an application keyset — sandbox and production are separate keysets.</li>
-            <li><b>Client ID / Client Secret</b> are the keyset's App ID and Cert ID (Application Keys page).</li>
-            <li><b>Refresh token</b>: on the Application Keys page click <b>User Tokens</b> → <i>Get a User Token</i> → <b>OAuth</b> → sign in with your eBay seller account and agree. Grant the <code>sell.inventory</code> and <code>sell.account</code> scopes.</li>
-            <li>Save here, then <b>Verify</b> — LP-OS mints short-lived access tokens from the refresh token automatically.</li>
-          </ol>
-        </details>
-        <div class="btns">
-          <button id="save-conn" class="primary">Save connection</button>
-          <button id="verify">Verify</button>
-          <button id="disconnect" class="danger">Disconnect</button>
-        </div>
-        <div id="conn-msg" class="msg"></div>
-        </div>
-      </div>
-
-      <div class="card" data-card="defaults">
-        <div class="card-hd">
-          <button class="card-grip" draggable="true" title="Drag to reorder"
-            aria-label="Drag to reorder">⠿</button>
-          <h2><button class="card-toggle" aria-expanded="true"><span
-                class="card-chevron" aria-hidden="true">▾</span>Listing defaults &amp; automatic listing</button></h2>
-          <span class="spacer"></span>
-          <span class="card-ctl">
-            <button class="card-up" title="Move up" aria-label="Move up">↑</button>
-            <button class="card-down" title="Move down" aria-label="Move down">↓</button>
-          </span>
-        </div>
-        <div class="card-body">
-        <div class="row">
-          <div>
-            <label for="postalCode">Ship-from ZIP (required to list)</label>
-            <input id="postalCode" placeholder="89104" />
-          </div>
-          <div>
-            <label for="city">City</label>
-            <input id="city" placeholder="Las Vegas" />
-          </div>
-          <div>
-            <label for="stateOrProvince">State</label>
-            <input id="stateOrProvince" placeholder="NV" />
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label for="defaultCreator">Default creator attribution</label>
-            <input id="defaultCreator" placeholder="@boosteddealsdaily" />
-          </div>
-          <div>
-            <label for="condition">Item condition</label>
-            <select id="condition">
-              <option value="NEW">New</option>
-              <option value="NEW_OTHER">New (open box)</option>
-              <option value="USED_EXCELLENT">Used – excellent</option>
-              <option value="USED_GOOD">Used – good</option>
-            </select>
-          </div>
-          <div>
-            <label
-              for="shippingFlatCost">Flat shipping $ (default policy)</label>
-            <input id="shippingFlatCost" placeholder="9.99" />
-          </div>
-        </div>
-        <div class="check">
-          <input type="checkbox" id="autoListScheduled" checked />
-          <label for="autoListScheduled"
-            style="margin:0; font-size:13px; color:var(--text)">Run <b>scheduled</b> auto-listings (imports with “auto-list after N days”)</label>
-        </div>
-        <div class="check">
-          <input type="checkbox" id="autoListClearedToSell" />
-          <label for="autoListClearedToSell"
-            style="margin:0; font-size:13px; color:var(--text)">Auto-list samples the moment they’re <b>Cleared to Sell</b></label>
-        </div>
-        <div class="btns">
-          <button id="save-settings" class="primary">Save settings</button>
-          <button id="run-pass">Run auto-list pass now</button>
-        </div>
-        <div id="settings-msg" class="msg"></div>
-        </div>
-      </div>
-
-      <div class="card" data-card="list-now">
-        <div class="card-hd">
-          <button class="card-grip" draggable="true" title="Drag to reorder"
-            aria-label="Drag to reorder">⠿</button>
-          <h2><button class="card-toggle" aria-expanded="true"><span
-                class="card-chevron" aria-hidden="true">▾</span>List a sample now</button></h2>
-          <span class="spacer"></span>
-          <span class="card-ctl">
-            <button class="card-up" title="Move up" aria-label="Move up">↑</button>
-            <button class="card-down" title="Move down" aria-label="Move down">↓</button>
-          </span>
-        </div>
-        <div class="card-body">
-        <div class="row">
-          <div>
-            <label for="list-ref">Sample ID or TikTok product ID</label>
-            <input id="list-ref" placeholder="42 or 1729…001 (scan works)" />
-          </div>
-          <div>
-            <label
-              for="list-price">Ask price $ (blank = best/current price)</label>
-            <input id="list-price" placeholder="40.00" />
-          </div>
-          <div>
-            <label for="list-creator">Creator (blank = auto-resolve)</label>
-            <input id="list-creator" placeholder="@handle" />
-          </div>
-        </div>
-        <button id="fx-chip" class="fx-chip" hidden
-          title="Show how the suggested Ask price was computed">ƒx suggested
-          <span id="fx-chip-price"></span></button>
-        <div id="fx-panel" class="formula" hidden>
-          <div class="fx-head">
-            <span>Suggested ask <b id="fx-price">$—</b>
-              <span class="muted" id="fx-for"></span></span>
             <span class="spacer"></span>
-            <button id="fx-min" class="fx-mini" title="Minimize to icon">–</button>
+            <span class="card-ctl">
+              <button class="card-up" title="Move up"
+                aria-label="Move up">↑</button>
+              <button class="card-down" title="Move down"
+                aria-label="Move down">↓</button>
+            </span>
           </div>
-          <div class="fx-steps" id="fx-steps"></div>
-          <div class="muted fx-note" id="fx-note"></div>
+          <div class="card-body">
+            <div class="row">
+              <div>
+                <label for="environment">Environment</label>
+                <select id="environment">
+                  <option value="sandbox">Sandbox (test)</option>
+                  <option value="production">Production (real listings)</option>
+                </select>
+              </div>
+              <div>
+                <label for="clientId">Client ID (App ID)</label>
+                <input id="clientId" autocomplete="off" spellcheck="false"
+                  placeholder="e.g. LPOS-…-PRD-…" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="clientSecret">Client Secret (Cert ID)</label>
+                <input id="clientSecret" type="password" autocomplete="off"
+                  placeholder="saved value kept unless replaced" />
+              </div>
+              <div>
+                <label for="refreshToken">Refresh token (~18 months)</label>
+                <input id="refreshToken" type="password" autocomplete="off"
+                  placeholder="v^1.1#i^1#r^1…" />
+              </div>
+            </div>
+            <label
+              for="accessToken">Access token (optional — 2-hour token for a quick test; the refresh token is the durable path)</label>
+            <input id="accessToken" type="password" autocomplete="off"
+              placeholder="v^1.1#i^1#p^3…" />
+            <p class="muted" id="saved-keys" style="margin:8px 0 0"></p>
+            <details>
+              <summary>Where do these come from?</summary>
+              <ol>
+                <li>Create a (free) developer account at <code>developer.ebay.com</code> and an application keyset — sandbox and production are separate keysets.</li>
+                <li><b>Client ID / Client Secret</b> are the keyset's App ID and Cert ID (Application Keys page).</li>
+                <li><b>Refresh token</b>: on the Application Keys page click <b>User Tokens</b> → <i>Get a User Token</i> → <b>OAuth</b> → sign in with your eBay seller account and agree. Grant the <code>sell.inventory</code> and <code>sell.account</code> scopes.</li>
+                <li>Save here, then <b>Verify</b> — LP-OS mints short-lived access tokens from the refresh token automatically.</li>
+              </ol>
+            </details>
+            <div class="btns">
+              <button id="save-conn" class="primary">Save connection</button>
+              <button id="verify">Verify</button>
+              <button id="disconnect" class="danger">Disconnect</button>
+            </div>
+            <div id="conn-msg" class="msg"></div>
+          </div>
         </div>
-        <div class="btns">
-          <button id="list-now" class="primary">List on eBay</button>
-        </div>
-        <div id="list-msg" class="msg"></div>
-        </div>
-      </div>
 
-      <div class="card" data-card="listings">
-        <div class="card-hd">
-          <button class="card-grip" draggable="true" title="Drag to reorder"
-            aria-label="Drag to reorder">⠿</button>
-          <h2><button class="card-toggle" aria-expanded="true"><span
+        <div class="card" data-card="defaults">
+          <div class="card-hd">
+            <button class="card-grip" draggable="true" title="Drag to reorder"
+              aria-label="Drag to reorder">⠿</button>
+            <h2><button class="card-toggle" aria-expanded="true"><span
+                class="card-chevron" aria-hidden="true">▾</span>Listing defaults &amp; automatic listing</button></h2>
+            <span class="spacer"></span>
+            <span class="card-ctl">
+              <button class="card-up" title="Move up"
+                aria-label="Move up">↑</button>
+              <button class="card-down" title="Move down"
+                aria-label="Move down">↓</button>
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div>
+                <label for="postalCode">Ship-from ZIP (required to list)</label>
+                <input id="postalCode" placeholder="89104" />
+              </div>
+              <div>
+                <label for="city">City</label>
+                <input id="city" placeholder="Las Vegas" />
+              </div>
+              <div>
+                <label for="stateOrProvince">State</label>
+                <input id="stateOrProvince" placeholder="NV" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="defaultCreator">Default creator attribution</label>
+                <input id="defaultCreator" placeholder="@boosteddealsdaily" />
+              </div>
+              <div>
+                <label for="condition">Item condition</label>
+                <select id="condition">
+                  <option value="NEW">New</option>
+                  <option value="NEW_OTHER">New (open box)</option>
+                  <option value="USED_EXCELLENT">Used – excellent</option>
+                  <option value="USED_GOOD">Used – good</option>
+                </select>
+              </div>
+              <div>
+                <label
+                  for="shippingFlatCost">Flat shipping $ (default policy)</label>
+                <input id="shippingFlatCost" placeholder="9.99" />
+              </div>
+            </div>
+            <div class="check">
+              <input type="checkbox" id="autoListScheduled" checked />
+              <label for="autoListScheduled"
+                style="margin:0; font-size:13px; color:var(--text)">Run <b>scheduled</b> auto-listings (imports with “auto-list after N days”)</label>
+            </div>
+            <div class="check">
+              <input type="checkbox" id="autoListClearedToSell" />
+              <label for="autoListClearedToSell"
+                style="margin:0; font-size:13px; color:var(--text)">Auto-list samples the moment they’re <b>Cleared to Sell</b></label>
+            </div>
+            <div class="btns">
+              <button id="save-settings" class="primary">Save settings</button>
+              <button id="run-pass">Run auto-list pass now</button>
+            </div>
+            <div id="settings-msg" class="msg"></div>
+          </div>
+        </div>
+
+        <div class="card" data-card="list-now">
+          <div class="card-hd">
+            <button class="card-grip" draggable="true" title="Drag to reorder"
+              aria-label="Drag to reorder">⠿</button>
+            <h2><button class="card-toggle" aria-expanded="true"><span
+                class="card-chevron" aria-hidden="true">▾</span>List a sample now</button></h2>
+            <span class="spacer"></span>
+            <span class="card-ctl">
+              <button class="card-up" title="Move up"
+                aria-label="Move up">↑</button>
+              <button class="card-down" title="Move down"
+                aria-label="Move down">↓</button>
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div>
+                <label for="list-ref">Sample ID or TikTok product ID</label>
+                <input id="list-ref"
+                  placeholder="42 or 1729…001 (scan works)" />
+              </div>
+              <div>
+                <label
+                  for="list-price">Ask price $ (blank = best/current price)</label>
+                <input id="list-price" placeholder="40.00" />
+              </div>
+              <div>
+                <label for="list-creator">Creator (blank = auto-resolve)</label>
+                <input id="list-creator" placeholder="@handle" />
+              </div>
+            </div>
+            <button id="fx-chip" class="fx-chip" hidden
+              title="Show how the suggested Ask price was computed">ƒx suggested
+          <span id="fx-chip-price"></span></button>
+            <div id="fx-panel" class="formula" hidden>
+              <div class="fx-head">
+                <span>Suggested ask <b id="fx-price">$—</b>
+              <span class="muted" id="fx-for"></span></span>
+                <span class="spacer"></span>
+                <button id="fx-min" class="fx-mini"
+                  title="Minimize to icon">–</button>
+              </div>
+              <div class="fx-steps" id="fx-steps"></div>
+              <div class="muted fx-note" id="fx-note"></div>
+            </div>
+            <div class="btns">
+              <button id="list-now" class="primary">List on eBay</button>
+            </div>
+            <div id="list-msg" class="msg"></div>
+          </div>
+        </div>
+
+        <div class="card" data-card="listings">
+          <div class="card-hd">
+            <button class="card-grip" draggable="true" title="Drag to reorder"
+              aria-label="Drag to reorder">⠿</button>
+            <h2><button class="card-toggle" aria-expanded="true"><span
                 class="card-chevron" aria-hidden="true">▾</span>Listings</button></h2>
-          <span class="spacer"></span>
-          <span class="card-ctl">
-            <button class="card-up" title="Move up" aria-label="Move up">↑</button>
-            <button class="card-down" title="Move down" aria-label="Move down">↓</button>
-          </span>
+            <span class="spacer"></span>
+            <span class="card-ctl">
+              <button class="card-up" title="Move up"
+                aria-label="Move up">↑</button>
+              <button class="card-down" title="Move down"
+                aria-label="Move down">↓</button>
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="tbl-top">
+              <span class="spacer"></span>
+              <select id="filter-status">
+                <option value="">All statuses</option>
+                <option value="listed">Listed</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+              <button id="refresh">Refresh</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Sample</th>
+                  <th>Status</th>
+                  <th>Price</th>
+                  <th>Creator</th>
+                  <th>Listing</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="rows">
+                <tr>
+                  <td colspan="7" class="empty">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="card-body">
-        <div class="tbl-top">
-          <span class="spacer"></span>
-          <select id="filter-status">
-            <option value="">All statuses</option>
-            <option value="listed">Listed</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-          </select>
-          <button id="refresh">Refresh</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Sample</th>
-              <th>Status</th>
-              <th>Price</th>
-              <th>Creator</th>
-              <th>Listing</th>
-              <th>Updated</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="rows">
-            <tr>
-              <td colspan="7" class="empty">Loading…</td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </div>
       </div>
     </div>
 
@@ -1111,7 +1121,9 @@
         ? "× 0.85 used"
         : null;
       if (r.anchorSource === "comp") {
-        steps.push(`anchor $${Number(r.anchor).toFixed(2)} (cheapest credible comp)`);
+        steps.push(
+          `anchor $${Number(r.anchor).toFixed(2)} (cheapest credible comp)`,
+        );
         if (usedStep) steps.push(usedStep);
         steps.push(
           r.lowConfidence
@@ -1131,7 +1143,9 @@
         steps.push("no comps or retail — fee-aware floor drives the price");
       }
       if (r.ageFactor < 1) {
-        steps.push(`× ${Number(r.ageFactor).toFixed(2)} (in stock ${r.daysListed}d)`);
+        steps.push(
+          `× ${Number(r.ageFactor).toFixed(2)} (in stock ${r.daysListed}d)`,
+        );
       }
       steps.push(
         `clamp [$${Number(r.floor).toFixed(2)} … $${Number(r.ceiling).toFixed(2)}]`,
@@ -1151,9 +1165,7 @@
       const floor = Number(r.floor).toFixed(2);
       const best = Number(row.best_price);
       const name = String(row.name || `sample ${row.id}`);
-      const shortName = name.length > 64
-        ? name.slice(0, 63).trimEnd() + "…"
-        : name;
+      const shortName = name.length > 64 ? name.slice(0, 63).trimEnd() + "…" : name;
       // Only a market-anchored result is a real suggestion. Floor-driven means
       // NO market data (no retail on file) — the $3.80-style constant must not
       // be auto-filled: blank keeps the server's best/current-price fallback
@@ -1186,9 +1198,7 @@
         pid ? `?product=${encodeURIComponent(pid)}` : ""
       }" target="_blank" rel="noopener noreferrer">open the pricing demo</a>`;
       $("fx-note").innerHTML = hasMarket
-        ? (best > 0
-          ? `Sample has best_price $${best.toFixed(2)} on file. `
-          : "") +
+        ? (best > 0 ? `Sample has best_price $${best.toFixed(2)} on file. ` : "") +
           `Edit the price to override · ${demoLink} to add real comps.`
         : (best > 0
           ? `Leave blank to list at the sample's best_price $${
@@ -1367,9 +1377,7 @@
     }
 
     function moveCard(card, dir) {
-      const sib = dir < 0
-        ? card.previousElementSibling
-        : card.nextElementSibling;
+      const sib = dir < 0 ? card.previousElementSibling : card.nextElementSibling;
       if (!sib || !sib.classList.contains("card")) return;
       if (dir < 0) cardsBox.insertBefore(card, sib);
       else cardsBox.insertBefore(sib, card);

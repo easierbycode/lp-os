@@ -61,12 +61,12 @@ layout, so read its scripts from `tok-scrape-main`:
 Parse `GRAYLOG_ENDPOINT` from **`config.js`** (not the scraper — the scraper
 reads `TOK_CONFIG`). Same stale-check as the other targets: the current GELF
 sink is **LP-OS `/gelf`** (`${LPOS_API_URL:-http://localhost:8000}/gelf`;
-production `https://thirsty.store/gelf`) — the old `*.ngrok-free.dev` endpoints are **stale**. If
-`GRAYLOG_ENDPOINT` points at an ngrok host, warn and stop. These pages are on
-`www.tiktok.com`, a different host than the seller scrapers. Because Chrome-MCP
-can't click the extension toolbar, **inject the source directly**:
-`javascript_tool` the **`config.js` body first**, then the **`scrape-order.js`
-body**, so `TOK_CONFIG` exists before the IIFE runs.
+production `https://thirsty.store/gelf`) — the old `*.ngrok-free.dev` endpoints
+are **stale**. If `GRAYLOG_ENDPOINT` points at an ngrok host, warn and stop.
+These pages are on `www.tiktok.com`, a different host than the seller scrapers.
+Because Chrome-MCP can't click the extension toolbar, **inject the source
+directly**: `javascript_tool` the **`config.js` body first**, then the
+**`scrape-order.js` body**, so `TOK_CONFIG` exists before the IIFE runs.
 
 ### Steps (these replace the generic single-page Steps 5–6 for `orders`)
 
@@ -209,10 +209,10 @@ clicks are blocked).
    `Read` it from disk. Parse out the `GRAYLOG_ENDPOINT` and `ENDPOINT` values
    so you can filter network requests to those hosts later. The current GELF
    sink is **LP-OS `/gelf`** (`${LPOS_API_URL:-http://localhost:8000}/gelf`;
-   production `https://thirsty.store/gelf`). If `GRAYLOG_ENDPOINT` still points at an
-   `*.ngrok-free.dev` host, warn the user that the endpoint is **stale** (the
-   old ngrok Graylog stack is retired) and stop — the bookmarklet source needs
-   its `GRAYLOG_ENDPOINT` repointed at LP-OS `/gelf` first.
+   production `https://thirsty.store/gelf`). If `GRAYLOG_ENDPOINT` still points
+   at an `*.ngrok-free.dev` host, warn the user that the endpoint is **stale**
+   (the old ngrok Graylog stack is retired) and stop — the bookmarklet source
+   needs its `GRAYLOG_ENDPOINT` repointed at LP-OS `/gelf` first.
 
 2. **Resolve the target URL** from `($1, $2)` per the table above. For
    `sellers + prod` and `live + prod`, do **not** navigate — instead skip ahead
@@ -392,10 +392,10 @@ clicks are blocked).
   request is the success signal.
 - GELF endpoint status: the current sink is **LP-OS `/gelf`**
   (`${LPOS_API_URL:-http://localhost:8000}/gelf`; production
-  `https://thirsty.store/gelf`). The
-  old `https://tok-graylog-gelf.ngrok-free.dev/gelf` ngrok endpoint is
-  stale/retired — treat any bookmarklet still carrying it as needing a repoint
-  before scraping.
+  `https://thirsty.store/gelf`). The old
+  `https://tok-graylog-gelf.ngrok-free.dev/gelf` ngrok endpoint is stale/retired
+  — treat any bookmarklet still carrying it as needing a repoint before
+  scraping.
 - The fixtures (`partner-center.html`, `partner-center2.html`,
   `seller-center.html`, `seller-center2.html`) are snapshots of the real DOM, so
   the same selectors and readiness probes work in both `dev` and `prod`.

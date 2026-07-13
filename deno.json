@@ -36,9 +36,9 @@
     "backfill:graylog": "deno run -A packages/graylog/scripts/backfill.ts"
   },
   "fmt": {
-    "exclude": ["apps/member", "extension", "**/dist", "**/build"]
+    "exclude": ["apps/member", "extension", "**/dist", "**/build", "**/vendor"]
   },
   "lint": {
-    "exclude": ["apps/member", "extension", "**/dist", "**/build"]
+    "exclude": ["apps/member", "extension", "**/dist", "**/build", "**/vendor"]
   }
 }

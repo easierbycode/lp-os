@@ -33,8 +33,7 @@ const EMBEDDED = (() => {
 const STEPS = {
   overview: {
     title: "Warehouse overview",
-    body:
-      "Follow a sample through the building: 1 Receiving (BIN A–Z at the " +
+    body: "Follow a sample through the building: 1 Receiving (BIN A–Z at the " +
       "dock), 2 Inventory (two aisles of three-level racks), 3 Studio " +
       "(content + fulfillment), 4 Marketplace (kiosk, ready-to-sell picking " +
       "and processing). Click a zone, a screen, or use the steps above.",
@@ -50,16 +49,14 @@ const STEPS = {
   },
   inventory: {
     title: "2 · Inventory",
-    body:
-      "Two aisles, four racks, three levels each. The forklift shuttles " +
+    body: "Two aisles, four racks, three levels each. The forklift shuttles " +
       "pallets while the workbench screen tracks every unit: status, " +
       "location, assignee — scan a barcode and the row lights up.",
     cam: { fx: 430, fy: 175, rx: -26, ry: -35, z: 220, y: 30 },
   },
   studio: {
     title: "3 · Studio (fulfillment)",
-    body:
-      "Ring light on, camera rolling: samples get their content moment, " +
+    body: "Ring light on, camera rolling: samples get their content moment, " +
       "then move to the packing table for fulfillment. Imports and creator " +
       "assignments happen on the studio screen.",
     cam: { fx: 145, fy: 165, rx: -20, ry: -24, z: 280, y: 30 },
@@ -74,7 +71,13 @@ const STEPS = {
   },
 };
 
-const STEP_ORDER = ["overview", "receiving", "inventory", "studio", "marketplace"];
+const STEP_ORDER = [
+  "overview",
+  "receiving",
+  "inventory",
+  "studio",
+  "marketplace",
+];
 
 /* ------------------------------------------------------- geometry helpers -- */
 
@@ -130,7 +133,9 @@ function makeBox({ x, y, z = 0, w, d, h, color, top, label, cls = "" }) {
     box,
     d,
     h,
-    `translate3d(${-d / 2}px, ${d / 2 - h}px, 0px) rotateX(-90deg) rotateY(90deg)`,
+    `translate3d(${-d / 2}px, ${
+      d / 2 - h
+    }px, 0px) rotateX(-90deg) rotateY(90deg)`,
     shade(34),
   );
   left.style.transformOrigin = "50% 100%";
@@ -138,7 +143,9 @@ function makeBox({ x, y, z = 0, w, d, h, color, top, label, cls = "" }) {
     box,
     d,
     h,
-    `translate3d(${w - d / 2}px, ${d / 2 - h}px, 0px) rotateX(-90deg) rotateY(90deg)`,
+    `translate3d(${w - d / 2}px, ${
+      d / 2 - h
+    }px, 0px) rotateX(-90deg) rotateY(90deg)`,
     shade(34),
   );
   right.style.transformOrigin = "50% 100%";
@@ -201,9 +208,10 @@ function buildRacks() {
 
       const edge = document.createElement("div");
       edge.className = "rack-edge";
-      edge.style.cssText =
-        `position:absolute;width:${RACK_LEN}px;height:4px;` +
-        `transform:translate3d(0px, ${RACK_DEPTH - 4}px, ${z}px) rotateX(-90deg);`;
+      edge.style.cssText = `position:absolute;width:${RACK_LEN}px;height:4px;` +
+        `transform:translate3d(0px, ${
+          RACK_DEPTH - 4
+        }px, ${z}px) rotateX(-90deg);`;
       rack.appendChild(edge);
 
       // Stock: deterministic pseudo-random emoji per slot.
@@ -213,9 +221,10 @@ function buildRacks() {
         item.className = "shelf-item";
         item.textContent =
           SHELF_STOCK[(rackIdx * 3 + slot * 2 + z / 26) % SHELF_STOCK.length];
-        item.style.cssText =
-          `position:absolute;font-size:15px;` +
-          `transform:translate3d(${14 + slot * 33}px, ${RACK_DEPTH - 18}px, ${z}px) rotateX(-90deg);`;
+        item.style.cssText = `position:absolute;font-size:15px;` +
+          `transform:translate3d(${14 + slot * 33}px, ${
+            RACK_DEPTH - 18
+          }px, ${z}px) rotateX(-90deg);`;
         rack.appendChild(item);
       }
     }
@@ -228,7 +237,9 @@ function buildRacks() {
           post.className = "rack-post";
           post.style.cssText =
             `position:absolute;width:4px;height:${POST_H}px;` +
-            `transform:translate3d(${px}px, ${py - POST_H}px, 0px) rotateX(-90deg) rotateY(${spin}deg);`;
+            `transform:translate3d(${px}px, ${
+              py - POST_H
+            }px, 0px) rotateX(-90deg) rotateY(${spin}deg);`;
           rack.appendChild(post);
         }
       }
@@ -243,7 +254,9 @@ function buildRacks() {
         `position:absolute;font:700 11px/1 var(--font-display);color:#f5b73c;` +
         `background:#14171ee6;border:1px solid #f5b73c66;border-radius:6px;` +
         `padding:3px 8px;letter-spacing:.12em;` +
-        `transform:translate3d(-4px, ${RACK_DEPTH}px, ${POST_H + 6}px) rotateX(-90deg) rotateY(calc(var(--cam-ry) * -1));`;
+        `transform:translate3d(-4px, ${RACK_DEPTH}px, ${
+          POST_H + 6
+        }px) rotateX(-90deg) rotateY(calc(var(--cam-ry) * -1));`;
       rack.appendChild(plate);
     }
 
@@ -273,8 +286,7 @@ function buildKiosk() {
   const goods = document.createElement("div");
   goods.className = "shelf-item";
   goods.textContent = "🧋🧴📦";
-  goods.style.cssText =
-    "position:absolute;font-size:14px;" +
+  goods.style.cssText = "position:absolute;font-size:14px;" +
     "transform:translate3d(650px, 128px, 26px) rotateX(-90deg);";
   ground.appendChild(goods);
 
@@ -282,8 +294,7 @@ function buildKiosk() {
   const keeper = document.createElement("div");
   keeper.className = "shelf-item";
   keeper.textContent = "🧑‍💼";
-  keeper.style.cssText =
-    "position:absolute;font-size:24px;" +
+  keeper.style.cssText = "position:absolute;font-size:24px;" +
     "transform:translate(688px, 100px) rotateX(-90deg) rotateY(180deg);";
   ground.appendChild(keeper);
 
