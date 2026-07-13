@@ -79,7 +79,12 @@
     var s = th ? th.querySelector('span') : null;
     return clean(s ? s.textContent : (th ? th.textContent : ''));
   })();
+  // The popup/shell selection is the authoritative creator scope. background.js
+  // copies it into the MAIN world before injecting this file. Fall back to the
+  // TikTok header for old extension builds and non-LP-OS use.
   var creator = (function () {
+    var selected = clean(window.LPOS_USER || '');
+    if (selected.charAt(0) === '@' && selected.length > 1) return selected;
     var avs = document.querySelectorAll('div.m4b-avatar');
     for (var i = 0; i < avs.length; i++) {
       var sib = avs[i].nextElementSibling;
@@ -109,9 +114,15 @@
   };
   var goToPage = async function (n) {
     var items = document.querySelectorAll('.arco-pagination-item');
+    var clicked = false;
     for (var i = 0; i < items.length; i++) {
-      if (items[i].textContent.trim() === String(n)) { items[i].click(); break; }
+      if (items[i].textContent.trim() === String(n)) {
+        items[i].click();
+        clicked = true;
+        break;
+      }
     }
+    if (!clicked) return false;
     return await waitFor(function () { return getActivePage() === n; }, 15000);
   };
   // The page-size control is an m4b/arco select inside `.arco-pagination-option`
@@ -157,17 +168,23 @@
   };
 
   // Navigate to page p and return the response captured by that navigation.
-  // Clicking the already-active page is a no-op that fires no request, so when
-  // we're already on p we bounce to a neighbor first to force a fresh fetch.
+  // Page 1 may already have been captured while setPageSize changed the table
+  // to 50/Page, so consume that fresh response instead of clicking the active
+  // page (a no-op). Otherwise bounce to a neighbor to force a request.
   var capturePage = async function (p) {
     var before = window.__tokCap.length;
+    if (p === 1 && getActivePage() === 1 && before > 0) {
+      return window.__tokCap[before - 1];
+    }
     if (getActivePage() === p) {
       var other = (p === 1) ? 2 : 1;
-      if (await goToPage(other)) await waitFor(function () { return window.__tokCap.length > before; }, 15000);
+      if (!(await goToPage(other))) return null;
+      await waitFor(function () { return window.__tokCap.length > before; }, 15000);
       before = window.__tokCap.length;
     }
-    await goToPage(p);
-    await waitFor(function () { return window.__tokCap.length > before; }, 15000);
+    if (!(await goToPage(p))) return null;
+    var captured = await waitFor(function () { return window.__tokCap.length > before; }, 15000);
+    if (!captured) return null;
     await sleep(300);
     return window.__tokCap[window.__tokCap.length - 1];
   };
@@ -177,6 +194,14 @@
   (async function run () {
     window.__tokCap.length = 0;
     var scrapedAt = new Date().toISOString();
+    // If the table is already on 50/Page, setPageSize is a no-op and the hook
+    // installed above sees no first-page request. Toggle through 20/Page first
+    // so returning to 50/Page always produces a fresh, capturable response.
+    var sizeBtn = document.querySelector('.arco-pagination-option .arco-select-view');
+    if (sizeBtn && clean(sizeBtn.textContent).indexOf(TARGET_PAGE_SIZE + '/Page') !== -1) {
+      await setPageSize(20);
+      await sleep(300);
+    }
     await setPageSize(TARGET_PAGE_SIZE);
     await sleep(800);
 

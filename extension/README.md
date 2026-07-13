@@ -38,8 +38,9 @@ Role mapping mirrors `apps/shell/core/roles.json`:
 
 When a scrape is blocked, the badge flashes `X` (red) and the service-worker
 console logs *why* (which user/role was resolved, via which source). For
-creator scrapes, the resolved handle is stamped into `TOK_CONFIG.LPOS_USER`
-(the legacy payload scripts ignore it; new consumers can read it).
+creator scrapes, the resolved handle is stamped into `TOK_CONFIG.LPOS_USER`.
+The Product Analytics MAIN-world capture receives the same handle and uses it
+as the canonical `creator` value; its TikTok-header lookup is only a fallback.
 
 ## Behavior × role matrix
 

@@ -22,7 +22,7 @@ globalThis.TOK_CONFIG = {
   SHEET_ENDPOINT: 'https://script.google.com/macros/s/AKfycbzRGJMcZGvdRsAd9UHHATRG5ilpeh4JHCZ11ye5CMhHbs4LulaYJJsnndw8I2NfgvdG/exec',
   SHEET_TOKEN: '**dingleding&&',
   // Resolved LP-OS user (e.g. '@boosteddealsdaily' or 'dj'); stamped by
-  // background.js so creator-scoped scrapes can carry their handle. The
-  // legacy payload scripts ignore it — the shape above is unchanged.
+  // background.js so creator-scoped scrapes can carry their handle. Product
+  // Analytics consumes the same value in its MAIN-world capture half.
   LPOS_USER: globalThis.LPOS_USER || null
 };

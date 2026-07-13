@@ -251,8 +251,16 @@ async function runScrape(tab) {
     });
     // Routes with a MAIN-world half (e.g. product-analysis) inject it second so
     // the isolated relay registered above is already listening for the
-    // window.postMessage payloads it emits.
+    // window.postMessage payloads it emits. Extension isolated-world globals
+    // are invisible to the page's MAIN world, so copy the resolved creator into
+    // that world before loading the capture script as well.
     if (route.mainFiles) {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        world: 'MAIN',
+        func: (user) => { globalThis.LPOS_USER = user; },
+        args: [auth.user]
+      });
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         world: 'MAIN',

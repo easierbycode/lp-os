@@ -113,7 +113,9 @@ check("LPOS_USER pre-injected with handle", state.injections[0].args && state.in
 r = await scrapeAt(URLS.product);
 check("product pair injected (isolated then MAIN)", r.ok === true &&
   injectedFiles().join(",") === "config.js,scrape-product.js,scrape-product-main.js" &&
-  state.injections[2].world === "MAIN");
+  state.injections[2].world === "MAIN" &&
+  state.injections[2].args && state.injections[2].args[0] === "@boosteddealsdaily" &&
+  state.injections[3].world === "MAIN");
 r = await scrapeAt(URLS.creator);
 check("agency creator blocked for creator role", r.ok === false && r.reason === "role");
 
