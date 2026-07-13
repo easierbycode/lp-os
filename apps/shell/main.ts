@@ -889,21 +889,34 @@ app.all(
 );
 
 /* --------------------------------------------------- vocab/config reads -- */
+// Read-only vocab/config, carrying the same permissive CORS as /api/products:
+// the Inventory companion (admin.thirsty.store) reads these cross-origin, so a
+// plain json() with no access-control-allow-origin gets blocked by the browser.
 
-app.get("/api/sample-statuses", () => json(listSampleStatuses()));
+app.all("/api/sample-statuses", (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "GET") return corsJson({ error: "Method not allowed" }, 405);
+  return corsJson(listSampleStatuses());
+});
 
-app.get("/api/creators", async (ctx) => {
-  if (!lifecycle) return dbUnavailable();
+app.all("/api/creators", async (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "GET") return corsJson({ error: "Method not allowed" }, 405);
+  if (!lifecycle) return dbUnavailable(true);
   try {
     const raw = Number(ctx.url.searchParams.get("limit"));
     const limit = Number.isFinite(raw) && raw > 0 ? Math.trunc(raw) : 1000;
-    return json({ creators: await lifecycle.fetchKnownCreators(limit) });
+    return corsJson({ creators: await lifecycle.fetchKnownCreators(limit) });
   } catch (error) {
-    return json({ error: errorMessage(error) }, 500);
+    return corsJson({ error: errorMessage(error) }, 500);
   }
 });
 
-app.get("/api/roles", (ctx) => json(rbacClientConfig(resolveUserId(ctx.url))));
+app.all("/api/roles", (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "GET") return corsJson({ error: "Method not allowed" }, 405);
+  return corsJson(rbacClientConfig(resolveUserId(ctx.url)));
+});
 
 /* ------------------------------------------------------------- demos/e2e -- */
 // APIs behind the /e2e demo page, ported from data-pimp. All carry CORS like
