@@ -1,10 +1,13 @@
-// In-memory fakes for the injected deps: a TableApi over arrays and a
-// GraylogStore that records every logEvent call.
+// In-memory fakes for the injected deps: a TableApi over arrays, a
+// GraylogStore that records every logEvent call, and an InventoryWriter that
+// records every applyBatch request and returns a canned outcome.
 
 import type {
   GraylogSearchParams,
   GraylogSearchResult,
   GraylogStore,
+  InventoryBatchOutcome,
+  InventoryWriter,
   LifecycleDb,
   TableApi,
 } from "../types.ts";
@@ -121,6 +124,45 @@ export class FakeStore implements GraylogStore {
   }
 }
 
+// The applyBatch request shape (declared inline on InventoryWriter) —
+// extracted so the fake can record requests with the exact structural type.
+export type InventoryBatchRequest = Parameters<
+  InventoryWriter["applyBatch"]
+>[0];
+
+// Records every applyBatch call verbatim and returns a canned outcome. Tests
+// must set `nextOutcome` before exercising a path that reaches the writer —
+// an unset outcome throws so a test can't silently pass on a default shape.
+export class FakeInventoryWriter implements InventoryWriter {
+  requests: InventoryBatchRequest[] = [];
+  nextOutcome: InventoryBatchOutcome | null = null;
+
+  applyBatch(request: InventoryBatchRequest): Promise<InventoryBatchOutcome> {
+    this.requests.push(request);
+    if (!this.nextOutcome) {
+      return Promise.reject(
+        new Error("FakeInventoryWriter.nextOutcome is not set"),
+      );
+    }
+    return Promise.resolve(this.nextOutcome);
+  }
+}
+
 export function makeDeps(): { db: FakeDb; store: FakeStore } {
   return { db: new FakeDb(), store: new FakeStore() };
+}
+
+// makeDeps plus an inventory writer, for the bulk-edit path. A separate helper
+// (rather than widening makeDeps) so existing callers keep constructing
+// lifecycles WITHOUT the optional inventory dep.
+export function makeInventoryDeps(): {
+  db: FakeDb;
+  store: FakeStore;
+  inventory: FakeInventoryWriter;
+} {
+  return {
+    db: new FakeDb(),
+    store: new FakeStore(),
+    inventory: new FakeInventoryWriter(),
+  };
 }

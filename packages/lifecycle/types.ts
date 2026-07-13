@@ -66,9 +66,43 @@ export interface GraylogStore {
   search(params: GraylogSearchParams): Promise<GraylogSearchResult>;
 }
 
+// Structural mirror of @lp-os/db's atomic Inventory Workbench writer
+// (applyInventoryBatch). Optional: shells without the bulk endpoint wired
+// still construct a lifecycle; recordBulkSampleEdit throws without it.
+export interface InventoryWriter {
+  applyBatch(request: {
+    requestId: string;
+    operator: string;
+    note?: string;
+    mutations: {
+      sampleId: number;
+      expectedVersion: number;
+      patch: Record<string, unknown>;
+    }[];
+  }): Promise<InventoryBatchOutcome>;
+}
+
+export type InventorySampleChange = {
+  sampleId: number;
+  action: string; // "check_out" | "check_in" | "custom"
+  name: string | null;
+  qr_code: string | null;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+};
+
+export type InventoryBatchOutcome = {
+  batchId: string;
+  requestId: string;
+  replayed: boolean;
+  rows: Record<string, unknown>[];
+  changes: InventorySampleChange[];
+};
+
 export interface LifecycleDeps {
   db: LifecycleDb;
   store: GraylogStore;
+  inventory?: InventoryWriter;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +367,32 @@ export type DueListingSchedule = {
   listAt: string;
 };
 
+// Inventory Workbench bulk edit (PATCH /api/samples/bulk). The atomic
+// Postgres work happens in the injected InventoryWriter; this layer owns
+// vocabulary validation and the per-sample Graylog events.
+export type BulkSampleEditInput = {
+  requestId?: string;
+  operator?: string;
+  note?: string;
+  mutations?: {
+    sampleId?: number;
+    expectedVersion?: number;
+    patch?: Record<string, unknown>;
+  }[];
+};
+
+export type BulkSampleEditResult = {
+  ok: boolean;
+  batchId: string;
+  requestId: string;
+  replayed: boolean;
+  rows: Record<string, unknown>[];
+  changes: InventorySampleChange[];
+  warnings: string[];
+  graylog: boolean;
+  message: string;
+};
+
 // ---------------------------------------------------------------------------
 // The Lifecycle surface (CONTRACTS.md "Lifecycle" — exact method set)
 // ---------------------------------------------------------------------------
@@ -345,6 +405,9 @@ export interface Lifecycle {
   recordAgencyIntake(input: AgencyIntakeInput): Promise<AgencyIntakeResult>;
   recordSampleAssignment(input: AssignmentInput): Promise<AssignmentResult>;
   recordSampleImport(input: ImportInput): Promise<ImportResult>;
+  recordBulkSampleEdit(
+    input: BulkSampleEditInput,
+  ): Promise<BulkSampleEditResult>;
   listSampleStatuses(): SampleStatusEntry[];
 }
 

@@ -117,9 +117,20 @@ package's `deno.json`).
     `default_home jsonb NOT NULL DEFAULT '[]'`. Seeded: admin/creator/warehouse
     per the Shell section.
   - `graylog_messages` — see Graylog section.
+  - **Inventory Workbench additions (0003) [decided here]:** `samples` gains
+    `version int NOT NULL DEFAULT 1` + `updated_at timestamptz NOT NULL
+    DEFAULT now()`, bumped by the `samples_touch_version` BEFORE UPDATE
+    trigger for EVERY writer (including the external tracker); `transactions`
+    gains `batch_id uuid`, `request_id uuid`, `changes jsonb` (before/after
+    audit payload); new `inventory_batches(batch_id uuid PK, request_id uuid
+    UNIQUE NOT NULL, operator text NOT NULL, mutation_count int NOT NULL,
+    result jsonb, created_at timestamptz NOT NULL DEFAULT now())` — the
+    idempotency anchor for `PATCH /api/samples/bulk` (a replayed request_id
+    returns the stored result, never reapplies).
   - Indexes: samples(qr_code), samples(bundle_id), samples(status),
     samples(sold_to), GIN samples(related_upc), bundles(qr_code),
-    transactions(sample_id), transactions(created_at).
+    transactions(sample_id), transactions(created_at),
+    transactions(batch_id).
 - Module API (`mod.ts` exports — exact signatures):
   ```ts
   export function getPool(): Pool; // lazy singleton from DATABASE_URL
@@ -142,6 +153,15 @@ package's `deno.json`).
   export const Bundles: TableApi;
   export const Transactions: TableApi; // maps to table "transactions"
   export function ensureSchema(): Promise<void>; // idempotent; mirrors migrations (CREATE/ALTER IF NOT EXISTS)
+  // Inventory Workbench (packages/db/inventory.ts, re-exported):
+  export function applyInventoryBatch(body: unknown): Promise<InventoryBatchOutcome>;
+  //   validate → one PoolClient txn: FOR UPDATE (id order) → version checks →
+  //   bundle validation → per-sample UPDATE + audit transactions row →
+  //   inventory_batches record → COMMIT. All-or-nothing; idempotent by
+  //   requestId; throws InventoryBatchError{kind: "validation"|"not_found"|
+  //   "conflict"} for the route to map to 400/404/409.
+  export function lookupSamplesByCode(code: string): Promise<{ code; samples; bundles }>;
+  //   every sample matching qr_code OR related_upc, plus bundles by qr_code.
   ```
   Internals follow data-pimp's proven pattern: column cache from
   `information_schema.columns`, `safeIdent`, `parseOrderBy` (`col` / `-col`,
@@ -275,9 +295,21 @@ export interface Lifecycle {
   recordAgencyIntake(input: AgencyIntakeInput): Promise<AgencyIntakeResult>;
   recordSampleAssignment(input: AssignmentInput): Promise<AssignmentResult>;
   recordSampleImport(input: ImportInput): Promise<ImportResult>;
+  recordBulkSampleEdit(input: BulkSampleEditInput): Promise<BulkSampleEditResult>;
   listSampleStatuses(): SampleStatusEntry[];
 }
 ```
+
+- `recordBulkSampleEdit` **[decided here]**: the atomic Postgres work lives in
+  the injected optional `deps.inventory: InventoryWriter` (wired to
+  `@lp-os/db applyInventoryBatch`); this layer validates the status vocabulary
+  (rejects `sold` → sold flow, rejects badge values) and, AFTER the commit,
+  emits per-sample events best-effort: `sample_assignment_json` for
+  assignments, `sample_status_json` for status changes,
+  `sample_inventory_edit_json` (new field) for location/bundle/quantity/price/
+  fire_sale/notes edits — all stamped with a shared flat `batch_id` and
+  `sample_source: "workbench-bulk-edit"`. Event failures become `warnings`,
+  never rollbacks. Replayed requests emit no events.
 
 - Graylog events go through `store.logEvent(shortMessage, fields)` (host/source
   `thirsty-store-kiosk` kept for continuity of existing queries **[decided
@@ -311,6 +343,27 @@ Routes:
   `/api/bundles`, `GET|POST /api/transactions`, `DELETE /api/transactions/:id` —
   inventory CRUD via `@lp-os/db` (request/response shapes per data-pimp:
   `order_by`, `limit`, filter params).
+- `PATCH /api/samples/bulk?user=<id>` **[decided here]** — atomic Inventory
+  Workbench bulk edit (CORS; registered before `/api/samples/:id`). Body
+  `{ requestId: uuid, note?, mutations: [{ sampleId, expectedVersion,
+  patch }] }` with patch limited to status/location/checked_out_to/bundle_id/
+  quantity/current_price/fire_sale/notes; max 250 samples; all-or-nothing;
+  idempotent by requestId; operator = server-resolved `?user=` (body labels
+  never override). 400 invalid / 404 missing samples / 409 version conflict
+  (`details.conflicts`) / 200 `{ ok, batchId, requestId, replayed, rows,
+  changes, warnings, graylog, message }`. Assignment (nonempty
+  `checked_out_to`) derives `status=checked_out` + `checked_out_at`; explicit
+  `checked_out_to: null` is a check-in (clears assignee, stamps
+  `checked_in_at`); location-only edits never touch status; `sold` is
+  rejected toward the sold flow.
+- `GET /api/samples/lookup?code=` **[decided here]** — batch-scan lookup
+  (CORS): `{ code, samples, bundles }`, matching `qr_code` OR any
+  `related_upc` (all rows — units can share a retail barcode), bundles by
+  `qr_code`.
+- `GET /warehouse` — CSS-3D warehouse dashboard (static/warehouse.html);
+  walking its steps posts `{source:"lp-os-warehouse", type:"warehouse-step",
+  step}` to os.js, which opens the mapped apps and answers with
+  `warehouse-ack`.
 - `POST /api/sample-status | sample-sold | sample-listing | sample-bulk-sold | agency-intake | sample-assign | sample-import`
   — thin wrappers over `@lp-os/lifecycle`.
 - `GET /api/sample-statuses`, `GET /api/creators`, `GET /api/roles` —
@@ -347,6 +400,23 @@ faithfully (rebrand "Thirsty OS" → "LP-OS"), then:
    `Member/App`, `Member/Web`); `side` ∈ `left`|`right`|`none` (snap or free
    placement). Unresolvable paths are skipped with a console.warn. Keep the
    `?workspace=samples-import` E2E block working.
+4. **Workbench batch-scan mode [decided here]:** the Inventory iframe posts
+   `{source:"lp-os-inventory", type:"batch-scan-mode", enabled, sessionId}`
+   (origin must be `INVENTORY_ORIGIN` or same-origin, and `e.source` must be
+   the actual iframe of an open Inventory window). While enabled, `routeScan`
+   sends BOTH UPC/EAN and TikTok product-id scans to that specific window as
+   `{source:"thirsty-os", type:"scan", kind, value, scanId, sessionId}` and
+   skips kiosk/intake routing and the graylog chase. Scanner presence fans in
+   as `{source:"thirsty-os", type:"scanner-presence", count, devices}` on
+   every presence change. Closing the window (or an `enabled:false` message)
+   restores default routing. Attribution: `openApp` appends
+   `?user=<currentUserId()>` to the Inventory and Warehouse iframe URLs.
+5. **Warehouse dashboard [decided here]:** `{source:"lp-os-warehouse",
+   type:"warehouse-step", step, sessionId}` (same-origin + source-window
+   check) opens/focuses the step's apps (receiving→Inventory `/scan`,
+   inventory→Inventory, studio→Samples-Import, marketplace→Kiosk +
+   Marketplace), tiles warehouse LEFT / primary app RIGHT, and answers
+   `{source:"thirsty-os", type:"warehouse-ack", step, opened}`.
 
 ### Roles config (apps/shell/core/roles.json + roles.ts)
 

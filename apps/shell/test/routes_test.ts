@@ -476,3 +476,77 @@ Deno.test("marketplace APIs enforce methods regardless of DB", async () => {
   assertEquals(del.status, 405);
   await del.body?.cancel();
 });
+
+// Workbench bulk edit (/api/samples/bulk). Method + JSON-parse checks precede
+// the lifecycle/DB gate, so those assertions run regardless of DATABASE_URL.
+Deno.test("OPTIONS /api/samples/bulk → 204 preflight advertising PATCH", async () => {
+  const res = await handler(req("/api/samples/bulk", { method: "OPTIONS" }));
+  assertEquals(res.status, 204);
+  assertEquals(res.headers.get("access-control-allow-origin"), "*");
+  assert(
+    (res.headers.get("access-control-allow-methods") ?? "").includes("PATCH"),
+  );
+  await res.body?.cancel();
+});
+
+Deno.test("GET /api/samples/bulk → 405 regardless of DB", async () => {
+  const res = await handler(req("/api/samples/bulk"));
+  assertEquals(res.status, 405);
+  const body = await res.json();
+  assertEquals(body.ok, false);
+  assertEquals(body.error, "Method not allowed");
+});
+
+Deno.test("PATCH /api/samples/bulk with invalid JSON → 400 regardless of DB", async () => {
+  const res = await handler(
+    req("/api/samples/bulk", { method: "PATCH", body: "not json" }),
+  );
+  assertEquals(res.status, 400);
+  assertEquals((await res.json()).ok, false);
+});
+
+Deno.test({
+  name: "PATCH /api/samples/bulk → 503 without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/samples/bulk", {
+      method: "PATCH",
+      body: JSON.stringify({ requestId: "test-1", mutations: [] }),
+    }));
+    assertEquals(res.status, 503);
+    assertEquals((await res.json()).error, "DATABASE_URL not configured");
+  },
+});
+
+// Batch-scan barcode lookup (/api/samples/lookup). The code-param check
+// precedes the DB gate, so the 400 runs regardless of DATABASE_URL.
+Deno.test("OPTIONS /api/samples/lookup → 204 preflight advertising PATCH", async () => {
+  const res = await handler(req("/api/samples/lookup", { method: "OPTIONS" }));
+  assertEquals(res.status, 204);
+  assert(
+    (res.headers.get("access-control-allow-methods") ?? "").includes("PATCH"),
+  );
+  await res.body?.cancel();
+});
+
+Deno.test("POST /api/samples/lookup → 405", async () => {
+  const res = await handler(req("/api/samples/lookup", { method: "POST" }));
+  assertEquals(res.status, 405);
+  await res.body?.cancel();
+});
+
+Deno.test("GET /api/samples/lookup without code → 400 regardless of DB", async () => {
+  const res = await handler(req("/api/samples/lookup"));
+  assertEquals(res.status, 400);
+  assertEquals((await res.json()).error, "code query param required");
+});
+
+Deno.test({
+  name: "GET /api/samples/lookup?code= → 503 without DATABASE_URL",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/samples/lookup?code=123"));
+    assertEquals(res.status, 503);
+    assertEquals((await res.json()).error, "DATABASE_URL not configured");
+  },
+});

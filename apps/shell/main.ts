@@ -105,7 +105,12 @@ const store: GraylogStore | null = hasDb
 // @lp-os/lifecycle's GraylogStore interface uses the same param names as the
 // real store (`rangeSeconds`), so the store satisfies it directly — no adapter.
 const lifecycle: (Lifecycle & LifecycleReads) | null = store
-  ? createLifecycle({ db, store })
+  ? createLifecycle({
+    db,
+    store,
+    // Atomic Inventory Workbench writes (PATCH /api/samples/bulk).
+    inventory: { applyBatch: (request) => db.applyInventoryBatch(request) },
+  })
   : null;
 
 // Real marketplace listings (eBay first). Credentials/settings live in the
@@ -150,7 +155,7 @@ function corsPreflight(): Response {
     status: 204,
     headers: {
       "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-methods": "GET, POST, PATCH, OPTIONS",
       "access-control-allow-headers": "content-type",
       "access-control-max-age": "86400",
     },
@@ -225,6 +230,10 @@ function osClientConfig(): Record<string, string> {
     scannerAppUrl: publicHttpBaseUrl(envValue("SCANNER_APP_URL")),
     inventoryAppUrl: publicHttpBaseUrl(envValue("INVENTORY_APP_URL")) ||
       "https://admin.thirsty.store",
+    // Lifepreneur member site (lifepreneur-v1). Override with
+    // LIFEPRENEUR_URL to point at a locally running instance.
+    lifepreneurUrl: publicHttpBaseUrl(envValue("LIFEPRENEUR_URL")) ||
+      "https://www.lifepreneur.io",
     graylogBase: publicHttpBaseUrl(
       envValue("GRAYLOG_UI_URL") || envValue("GRAYLOG_SEARCH_URL"),
     ),
@@ -413,6 +422,14 @@ app.get("/install", async (ctx) => {
 app.get("/marketplace", async (ctx) => {
   const res = await serveStatic("/marketplace.html", ctx.req.method);
   return res ?? json({ error: "marketplace page missing" }, 500);
+});
+
+// CSS-3D warehouse dashboard (Apps → Warehouse). Same pattern as /install.
+// Walking its steps posts warehouse-step messages to os.js, which opens the
+// matching app windows beside it.
+app.get("/warehouse", async (ctx) => {
+  const res = await serveStatic("/warehouse.html", ctx.req.method);
+  return res ?? json({ error: "warehouse page missing" }, 500);
 });
 
 // One-click sample-lifecycle demo (Demos/E2E), ported from data-pimp. Same
@@ -642,6 +659,77 @@ app.all("/api/samples", async (ctx) => {
     return json({ error: "Method not allowed" }, 405);
   } catch (error) {
     return json({ error: errorMessage(error) }, 500);
+  }
+});
+
+// Atomic Inventory Workbench bulk edit — MUST be registered before
+// /api/samples/:id so "bulk" is never captured as an :id. All-or-nothing:
+// either every mutation commits (rows + audit transactions + batch record)
+// or none do. Idempotent by requestId. CORS: the tracker at
+// admin.thirsty.store PATCHes this cross-origin.
+app.all("/api/samples/bulk", async (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "PATCH") {
+    return corsJson({ ok: false, error: "Method not allowed" }, 405);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await readJsonBody(ctx.req) as Record<string, unknown>;
+  } catch (error) {
+    return corsJson({ ok: false, error: errorMessage(error) }, 400);
+  }
+  if (!lifecycle) return dbUnavailable(true);
+  try {
+    // Operator attribution comes from the shell's mocked ?user= profile —
+    // a client-supplied operator label never overrides it.
+    const result = await lifecycle.recordBulkSampleEdit({
+      requestId: typeof body.requestId === "string" ? body.requestId : "",
+      note: typeof body.note === "string" ? body.note : undefined,
+      mutations: Array.isArray(body.mutations)
+        ? body.mutations as {
+          sampleId?: number;
+          expectedVersion?: number;
+          patch?: Record<string, unknown>;
+        }[]
+        : [],
+      operator: resolveUserId(ctx.url),
+    });
+    return corsJson(result);
+  } catch (error) {
+    const kind = (error as { kind?: string }).kind;
+    const details = (error as { details?: unknown }).details;
+    const status = kind === "validation"
+      ? 400
+      : kind === "not_found"
+      ? 404
+      : kind === "conflict"
+      ? 409
+      : errorMessage(error).includes("not a valid sample status") ||
+          errorMessage(error).includes("sold flow")
+      ? 400
+      : 500;
+    return corsJson(
+      { ok: false, error: errorMessage(error), details: details ?? undefined },
+      status,
+    );
+  }
+});
+
+// Barcode lookup for the workbench batch-scan mode: every sample whose
+// qr_code or related_upc matches, plus bundles sharing the QR. Registered
+// before /api/samples/:id for the same literal-segment reason as /bulk.
+app.all("/api/samples/lookup", async (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "GET") {
+    return corsJson({ error: "Method not allowed" }, 405);
+  }
+  const code = (ctx.url.searchParams.get("code") || "").trim();
+  if (!code) return corsJson({ error: "code query param required" }, 400);
+  if (!hasDb) return dbUnavailable(true);
+  try {
+    return corsJson(await db.lookupSamplesByCode(code));
+  } catch (error) {
+    return corsJson({ error: errorMessage(error) }, 500);
   }
 });
 
@@ -1376,7 +1464,8 @@ async function maximizeDesktopWindow() {
   // ("tcp:127.0.0.1:<port>"); wait until the server answers there.
   const port = Deno.env.get("DENO_SERVE_ADDRESS")?.split(":").pop();
   if (!port) return;
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
   for (let attempt = 0; attempt < 60; attempt++) {
     try {
       const res = await fetch(`http://127.0.0.1:${port}/health`);
