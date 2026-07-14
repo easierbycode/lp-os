@@ -491,6 +491,14 @@ app.get("/admin", async (ctx) => {
   return res ?? json({ error: "admin page missing" }, 500);
 });
 
+// Settings window (Account, Security, Plan & Billing, Notifications, Team).
+// Same pattern as /admin: static page whose Team tab reuses /api/roles +
+// /api/catalog. The other tabs are per-device UI with no server backend.
+app.get("/settings", async (ctx) => {
+  const res = await serveStatic("/settings.html", ctx.req.method);
+  return res ?? json({ error: "settings page missing" }, 500);
+});
+
 // CSS-3D warehouse dashboard (Apps → Warehouse). Same pattern as /install.
 // Walking its steps posts warehouse-step messages to os.js, which opens the
 // matching app windows beside it.

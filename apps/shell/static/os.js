@@ -263,6 +263,17 @@ const ICONS = {
         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </g>
     </svg>`,
+
+  // Lucide "settings" gear on the gold tile — the Settings window.
+  settings: `
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#g-val)"/>
+      <rect x="6" y="6" width="52" height="26" rx="14" fill="#fff" opacity=".12"/>
+      <g transform="translate(20 20)" fill="none" stroke="#3a2405" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3.4"/>
+        <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/>
+      </g>
+    </svg>`,
 };
 
 /* --------------------------------------------------------------- config -- */
@@ -479,6 +490,19 @@ const FOLDERS = [
         url: "/admin",
         width: 1180,
         height: 780,
+      },
+      {
+        id: "settings",
+        name: "Settings",
+        icon: ICONS.settings,
+        flag: "app.settings",
+        // Account, Security, Plan & Billing, Notifications, and a Team tab that
+        // reuses the Admin window's roles.json model (served same-origin at
+        // /settings). openApp appends ?user= so Account prefills the signed-in
+        // user and Team's self-lockout guard resolves the right role.
+        url: "/settings",
+        width: 1180,
+        height: 800,
       },
     ],
   },
@@ -1468,7 +1492,8 @@ function openApp(item) {
   // consistent across shell, tracker, and Postgres audit rows. The Admin window
   // rides along too so it resolves the signed-in user (its self-lockout guard).
   if (
-    item.id === "inventory" || item.id === "warehouse" || item.id === "admin"
+    item.id === "inventory" || item.id === "warehouse" ||
+    item.id === "admin" || item.id === "settings"
   ) {
     const withUser = urlWithParams(item.url, { user: currentUserId() });
     if (withUser) item = { ...item, url: withUser };

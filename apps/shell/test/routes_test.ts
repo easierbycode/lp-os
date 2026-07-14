@@ -117,6 +117,15 @@ Deno.test("GET /admin serves the admin window page", async () => {
   assertStringIncludes(html, 'id="admin-root"');
 });
 
+Deno.test("GET /settings serves the Settings window page", async () => {
+  const res = await handler(req("/settings"));
+  assertEquals(res.status, 200);
+  assertStringIncludes(res.headers.get("content-type") ?? "", "text/html");
+  const html = await res.text();
+  assertStringIncludes(html, "/settings.js");
+  assertStringIncludes(html, 'id="settings-root"');
+});
+
 Deno.test("GET /api/catalog → launcher folders with gating flags", async () => {
   const res = await handler(req("/api/catalog"));
   assertEquals(res.status, 200);
@@ -126,6 +135,8 @@ Deno.test("GET /api/catalog → launcher folders with gating flags", async () =>
   const apps = body.find((f: { id: string }) => f.id === "apps");
   assertEquals(apps.flag, "folder.apps");
   assert(apps.items.some((i: { flag?: string }) => i.flag === "app.admin"));
+  // Settings joins the Apps folder gated by its own capability flag.
+  assert(apps.items.some((i: { flag?: string }) => i.flag === "app.settings"));
 });
 
 // The Admin window's Save. A malformed config must be rejected (400) before it

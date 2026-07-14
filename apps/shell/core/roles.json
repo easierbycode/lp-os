@@ -13,6 +13,7 @@
     { "id": "app.marketplace", "label": "Marketplace listings (eBay)" },
     { "id": "app.warehouse", "label": "Warehouse (3D dashboard)" },
     { "id": "app.admin", "label": "Admin (users & roles)" },
+    { "id": "app.settings", "label": "Settings" },
     { "id": "ops.debugCounts", "label": "Row-count debug endpoint" },
     {
       "id": "ops.checkoutAlerts",

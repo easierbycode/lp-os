@@ -54,6 +54,7 @@ export const APP_CATALOG: CatalogFolder[] = [
       { id: "marketplace", name: "Marketplace", flag: "app.marketplace" },
       { id: "warehouse", name: "Warehouse", flag: "app.warehouse" },
       { id: "admin", name: "Admin", flag: "app.admin" },
+      { id: "settings", name: "Settings", flag: "app.settings" },
     ],
   },
   {
