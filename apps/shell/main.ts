@@ -38,7 +38,14 @@ import {
   markdownLadder,
   startAutoLister,
 } from "@lp-os/marketplace";
-import { DEFAULT_USER_ID, rbacClientConfig } from "./core/roles.ts";
+import {
+  applyRolesConfig,
+  DEFAULT_USER_ID,
+  parseRolesConfig,
+  persistRolesConfig,
+  rbacClientConfig,
+} from "./core/roles.ts";
+import { APP_CATALOG } from "./core/catalog.ts";
 import { createProductAnalysis } from "./core/product-analysis.ts";
 import { createSampleImage } from "./core/sample-image.ts";
 import {
@@ -475,6 +482,13 @@ app.get("/install", async (ctx) => {
 app.get("/marketplace", async (ctx) => {
   const res = await serveStatic("/marketplace.html", ctx.req.method);
   return res ?? json({ error: "marketplace page missing" }, 500);
+});
+
+// Admin window (users, roles, capability flags, per-role boot layout). Static
+// page; it fetches /api/roles + /api/catalog and saves back via POST /api/roles.
+app.get("/admin", async (ctx) => {
+  const res = await serveStatic("/admin.html", ctx.req.method);
+  return res ?? json({ error: "admin page missing" }, 500);
 });
 
 // CSS-3D warehouse dashboard (Apps → Warehouse). Same pattern as /install.
@@ -948,13 +962,17 @@ app.all(
 
 app.all("/api/sample-statuses", (ctx) => {
   if (ctx.req.method === "OPTIONS") return corsPreflight();
-  if (ctx.req.method !== "GET") return corsJson({ error: "Method not allowed" }, 405);
+  if (ctx.req.method !== "GET") {
+    return corsJson({ error: "Method not allowed" }, 405);
+  }
   return corsJson(listSampleStatuses());
 });
 
 app.all("/api/creators", async (ctx) => {
   if (ctx.req.method === "OPTIONS") return corsPreflight();
-  if (ctx.req.method !== "GET") return corsJson({ error: "Method not allowed" }, 405);
+  if (ctx.req.method !== "GET") {
+    return corsJson({ error: "Method not allowed" }, 405);
+  }
   if (!lifecycle) return dbUnavailable(true);
   try {
     const raw = Number(ctx.url.searchParams.get("limit"));
@@ -965,10 +983,52 @@ app.all("/api/creators", async (ctx) => {
   }
 });
 
-app.all("/api/roles", (ctx) => {
+app.all("/api/roles", async (ctx) => {
   if (ctx.req.method === "OPTIONS") return corsPreflight();
-  if (ctx.req.method !== "GET") return corsJson({ error: "Method not allowed" }, 405);
-  return corsJson(rbacClientConfig(resolveUserId(ctx.url)));
+  if (ctx.req.method === "GET") {
+    return corsJson(rbacClientConfig(resolveUserId(ctx.url)));
+  }
+  // Save from the Admin window (static/admin.js): validate the whole config,
+  // swap it in-memory (the OS shell picks it up on its next paint), then
+  // best-effort rewrite roles.json. Not an auth boundary — like every RBAC
+  // flag, this is UX gating on a mock-login OS (see core/roles.ts).
+  if (ctx.req.method === "POST") {
+    let body: Record<string, unknown>;
+    try {
+      body = await readJsonBody(ctx.req);
+    } catch (error) {
+      return corsJson({ ok: false, error: errorMessage(error) }, 400);
+    }
+    const parsed = parseRolesConfig(body.config ?? body);
+    if (!parsed.ok || !parsed.config) {
+      return corsJson(
+        { ok: false, error: parsed.error ?? "invalid config" },
+        400,
+      );
+    }
+    applyRolesConfig(parsed.config);
+    const { persisted, error } = await persistRolesConfig();
+    // A read-only FS (Deno Deploy) means the edit is live but won't survive a
+    // restart — report it so the UI can say so, but the save still "succeeded".
+    return corsJson({
+      ok: true,
+      persisted,
+      ...(persisted ? {} : { persistError: error }),
+      config: rbacClientConfig(resolveUserId(ctx.url)),
+    });
+  }
+  return corsJson({ error: "Method not allowed" }, 405);
+});
+
+// The desktop launcher catalog the Admin window edits against (folders/apps a
+// role's flags gate, and the names its boot layout may point at). Read-only
+// mirror of os.js FOLDERS; CORS like the other vocab reads.
+app.all("/api/catalog", (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "GET") {
+    return corsJson({ error: "Method not allowed" }, 405);
+  }
+  return corsJson(APP_CATALOG);
 });
 
 /* ------------------------------------------------------------- demos/e2e -- */

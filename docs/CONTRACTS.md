@@ -495,6 +495,37 @@ splits the query string and appends it to the item URL). **User selection:**
 derived. `roles.ts` mirrors flag logic server-side and exports
 `rbacClientConfig(currentUserId)`.
 
+The `app.admin` flag gates the Admin window (below); admins hold it via `*`,
+other roles don't list it, so it stays hidden by default.
+
+### Admin window (apps/shell → static/admin.html + /admin)
+
+Same-origin app page (FOLDERS app id `admin`, RBAC flag `app.admin`), served at
+`/admin` like `/marketplace` — the vanilla, framework-free build of the "Admin
+control panel for LP-OS" design handoff (variant 1a, "Workbench — roles first").
+Edits the whole roles config: per-role capability toggles (with the `*`
+wildcard + per-flag override/clear), the `default_home` boot layout (drag app
+chips into LEFT/RIGHT halves), users (add/remove/rename/reassign role), and
+capability flags (add/remove/relabel), with a live desktop preview per role. The
+signed-in user's own role is self-lockout-guarded (`*` stays on, role
+undeletable, can't remove yourself) — `openApp` rides `?user=` along to `/admin`
+so the panel knows who "you" is.
+
+- **Catalog:** `core/catalog.ts` (`APP_CATALOG`) is the server-side mirror of
+  os.js `FOLDERS` (folder/app names + gating flags, no runtime fields), served
+  at `GET /api/catalog` and read by the panel for its boot-layout picker +
+  preview. Keep it in sync when FOLDERS gains/renames a folder or app.
+- **Save:** `POST /api/roles {config}` validates via `roles.ts parseRolesConfig`
+  (rejects: no roles, missing ids, duplicate ids, a user on an unknown role, a
+  malformed `default_home` entry), then `applyRolesConfig` swaps the in-memory
+  config (the next OS-shell paint + `/api/roles` read see it immediately) and
+  `persistRolesConfig` best-effort rewrites `roles.json`. Returns
+  `{ok, persisted, config}`; on a read-only FS (Deno Deploy) `persisted:false`
+  and the edit lives only for the process. **Not an auth boundary** — like every
+  RBAC flag, this is UX gating on a mock-login OS.
+- `roles.ts` now holds the config in a mutable in-memory copy (all readers are
+  live); `GET /api/roles` is unchanged for readers.
+
 ### FOLDERS changes vs data-pimp
 
 - `Member/App` → `${MEMBER_APP_URL}/` and `Member/Web` → `MEMBER_WEB_URL`

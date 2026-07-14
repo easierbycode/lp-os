@@ -108,6 +108,44 @@ Deno.test("GET /api/sample-statuses → vocabulary without DB", async () => {
   assert(Array.isArray(body) && body.length > 0);
 });
 
+Deno.test("GET /admin serves the admin window page", async () => {
+  const res = await handler(req("/admin"));
+  assertEquals(res.status, 200);
+  assertStringIncludes(res.headers.get("content-type") ?? "", "text/html");
+  const html = await res.text();
+  assertStringIncludes(html, "/admin.js");
+  assertStringIncludes(html, 'id="admin-root"');
+});
+
+Deno.test("GET /api/catalog → launcher folders with gating flags", async () => {
+  const res = await handler(req("/api/catalog"));
+  assertEquals(res.status, 200);
+  assertEquals(res.headers.get("access-control-allow-origin"), "*");
+  const body = await res.json();
+  assert(Array.isArray(body));
+  const apps = body.find((f: { id: string }) => f.id === "apps");
+  assertEquals(apps.flag, "folder.apps");
+  assert(apps.items.some((i: { flag?: string }) => i.flag === "app.admin"));
+});
+
+// The Admin window's Save. A malformed config must be rejected (400) before it
+// can reach roles.json; a valid save is exercised in the roles unit test, which
+// doesn't touch the real file.
+Deno.test("POST /api/roles rejects an invalid config", async () => {
+  const res = await handler(
+    req("/api/roles", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ config: { flags: [], roles: [], users: [] } }),
+    }),
+  );
+  assertEquals(res.status, 400);
+  assertEquals(res.headers.get("access-control-allow-origin"), "*");
+  const body = await res.json();
+  assertEquals(body.ok, false);
+  assertStringIncludes(body.error, "role");
+});
+
 // The Inventory companion (admin.thirsty.store) reads these vocab/config
 // endpoints cross-origin, so every response path must carry ACAO — a plain
 // json() (no CORS header) gets blocked by the browser. GET carries it on every

@@ -250,6 +250,19 @@ const ICONS = {
       <rect x="18" y="34" width="5" height="5" rx="1" fill="#fbbf24"/>
       <rect x="41" y="34" width="5" height="5" rx="1" fill="#fbbf24"/>
     </svg>`,
+
+  // Lucide "users" glyph on the gold tile — the Admin (users & roles) window.
+  admin: `
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#g-val)"/>
+      <rect x="6" y="6" width="52" height="26" rx="14" fill="#fff" opacity=".12"/>
+      <g transform="translate(14 14) scale(1.5)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </g>
+    </svg>`,
 };
 
 /* --------------------------------------------------------------- config -- */
@@ -451,6 +464,21 @@ const FOLDERS = [
         allow: "fullscreen",
         width: 1280,
         height: 800,
+      },
+      {
+        id: "admin",
+        name: "Admin",
+        icon: ICONS.admin,
+        flag: "app.admin",
+        // Users, roles, capability flags, and per-role default_home boot
+        // layout (served same-origin at /admin). Saving rewrites
+        // core/roles.json via POST /api/roles. Admins reach it via the `*`
+        // wildcard; other roles don't list app.admin, so it stays hidden.
+        // openApp appends ?user= so the panel knows who's signed in (and can't
+        // let them lock their own role out of this window).
+        url: "/admin",
+        width: 1180,
+        height: 780,
       },
     ],
   },
@@ -1437,8 +1465,11 @@ function openApp(item) {
   // Attribution ride-along: the Inventory tracker and the Warehouse dashboard
   // both act as the shell's current mocked user, so their windows get ?user=
   // appended — the tracker forwards it to the bulk API, keeping the operator
-  // consistent across shell, tracker, and Postgres audit rows.
-  if (item.id === "inventory" || item.id === "warehouse") {
+  // consistent across shell, tracker, and Postgres audit rows. The Admin window
+  // rides along too so it resolves the signed-in user (its self-lockout guard).
+  if (
+    item.id === "inventory" || item.id === "warehouse" || item.id === "admin"
+  ) {
     const withUser = urlWithParams(item.url, { user: currentUserId() });
     if (withUser) item = { ...item, url: withUser };
   }
