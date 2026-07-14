@@ -422,8 +422,11 @@ faithfully (rebrand "Thirsty OS" → "LP-OS"), then:
    `{source:"lp-os-warehouse",
    type:"warehouse-step", step, sessionId}`
    (same-origin + source-window check) opens/focuses the step's apps
-   (receiving→Inventory `/scan`, inventory→Inventory, studio→Samples-Import,
-   marketplace→Kiosk + Marketplace), tiles warehouse LEFT / primary app RIGHT,
+   (receiving→Inventory `/scan`, inventory→Inventory `/` (Dashboard),
+   studio→Samples-Import, marketplace→Kiosk + Marketplace); a step with a `path`
+   also steers an already-open pane there (so inventory pulls Inventory back to
+   the Dashboard after receiving left it on `/scan`), tiles warehouse LEFT /
+   primary app RIGHT,
    and answers `{source:"thirsty-os", type:"warehouse-ack", step, opened}`.
 
 ### Roles config (apps/shell/core/roles.json + roles.ts)

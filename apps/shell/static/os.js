@@ -1804,11 +1804,29 @@ globalThis.addEventListener("message", (e) => {
 // actual Warehouse window's iframe is trusted (source-window match).
 const WAREHOUSE_STEP_APPS = {
   receiving: [{ app: "inventory", path: "/scan" }],
-  inventory: [{ app: "inventory" }],
+  inventory: [{ app: "inventory", path: "/" }], // tracker root = Dashboard
   studio: [{ app: "samples-import" }],
   marketplace: [{ app: "kiosk" }, { app: "marketplace" }],
   overview: [],
 };
+
+// Steer an already-open tour pane to the step's path. Panes can be cross-origin
+// (the tracker), so navigation is a src swap — the trick routeScanToInventory
+// uses — and the ?user= attribution the inventory/warehouse windows carry is
+// re-applied. No-op when the pane is already there, so revisiting a step doesn't
+// needlessly reload it.
+function navigateStepWindow(win, appId, path) {
+  const item = appItemById(appId);
+  if (!item || !item.url) return;
+  let target = item.url + path;
+  if (item.id === "inventory" || item.id === "warehouse") {
+    target = urlWithParams(target, { user: currentUserId() }) || target;
+  }
+  if (!allowedFrameUrl(target)) return;
+  const frame = windowFrame(win);
+  if (!frame || frame.getAttribute("src") === target) return;
+  frame.src = target;
+}
 
 globalThis.addEventListener("message", (e) => {
   if (e.origin !== location.origin) return;
@@ -1833,10 +1851,16 @@ globalThis.addEventListener("message", (e) => {
       if (!item || !allows(item.flag) || !itemConfigured(item) || !item.url) {
         continue;
       }
-      // Fresh windows may deep-link a step path (e.g. Inventory /scan for
-      // receiving); already-open windows are focused, never navigated away.
+      // Fresh windows deep-link the step's path (e.g. Inventory /scan for
+      // receiving, / — the Dashboard — for inventory).
       win = openApp(path ? { ...item, url: item.url + path } : item);
       if (!win) continue;
+    } else if (path) {
+      // Reused pane: steer it to the step's path so revisiting an app lands on
+      // the step's screen rather than wherever an earlier step left it — the
+      // inventory step pulls Inventory back to the Dashboard (/) after the
+      // receiving step deep-linked it to /scan.
+      navigateStepWindow(win, appId, path);
     }
     if (win.minimized) setMinimized(win, false);
     opened.push({ app: appId, winId: win.id });
