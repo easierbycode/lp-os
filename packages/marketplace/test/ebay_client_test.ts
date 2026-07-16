@@ -566,19 +566,31 @@ Deno.test("token refresh failure surfaces a clear error", async () => {
 });
 
 Deno.test("verify reports ok with working credentials and failure detail otherwise", async () => {
-  const { fetchImpl } = makeFetch((call) => {
+  const { fetchImpl, calls } = makeFetch((call) => {
     if (call.url.includes("/oauth2/token")) {
       return { status: 200, body: { access_token: "at-1", expires_in: 7200 } };
     }
-    if (call.url.includes("/sell/inventory/v1/location?limit=1")) {
-      return { status: 200, body: { locations: [] } };
+    if (call.url.includes("/sell/account/v1/privilege")) {
+      return { status: 200, body: { sellerRegistrationCompleted: false } };
     }
+    // location/{key} is deliberately left unscripted → 404, which verify must
+    // still treat as a pass: the token authenticated, the key just isn't
+    // provisioned yet.
     return undefined;
   });
   const client = createEbayClient({ credentials: REFRESH_CREDS, fetchImpl });
   const ok = await client.verify();
   assertEquals(ok.ok, true);
   assertStringIncludes(ok.detail, "sandbox");
+  // Both scopes a listing needs get exercised...
+  assert(calls.some((c) => c.url.includes("/sell/account/v1/privilege")));
+  assert(
+    calls.some((c) =>
+      c.url.includes("/sell/inventory/v1/location/lp-os-default")
+    ),
+  );
+  // ...and never via list-locations, which answers 500 (25001) on Sandbox.
+  assert(!calls.some((c) => c.url.includes("/location?limit=")));
 
   const failing = makeFetch((call) => {
     if (call.url.includes("/oauth2/token")) {

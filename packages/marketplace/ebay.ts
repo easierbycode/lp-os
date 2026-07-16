@@ -143,6 +143,12 @@ export function createEbayClient(opts: EbayClientOptions): MarketplaceClient {
       headers["content-language"] = contentLanguage;
       payload = JSON.stringify(body);
     }
+    // PUT inventory_item and GET offer reject a request with no
+    // Accept-Language (error 25709, "Invalid value for header
+    // Accept-Language") — every other Sell/Taxonomy call tolerates it, so send
+    // it on all API calls. The OAuth token endpoint is the exception: it takes
+    // the form body only.
+    if (!extra?.form) headers["accept-language"] = contentLanguage;
     if (extra?.auth) headers["authorization"] = extra.auth;
 
     let res: Response;
@@ -597,7 +603,19 @@ export function createEbayClient(opts: EbayClientOptions): MarketplaceClient {
   async function verify(): Promise<{ ok: boolean; detail: string }> {
     try {
       await accessToken();
-      await api("GET", "/sell/inventory/v1/location?limit=1");
+      // Cover both scopes a listing needs: sell.account (ensurePolicies) and
+      // sell.inventory (ensureLocation/offers). Fetching ONE location by key
+      // rather than listing them is deliberate — list-locations answers 500
+      // (25001) on Sandbox, which made this check unpassable there. A 404 is
+      // still a pass: it proves the token authenticated and the key merely
+      // hasn't been provisioned yet.
+      await api("GET", "/sell/account/v1/privilege");
+      await api(
+        "GET",
+        `/sell/inventory/v1/location/${encodeURIComponent(locationKey)}`,
+        undefined,
+        [404],
+      );
       return {
         ok: true,
         detail: `eBay ${environment} credentials OK (${marketplaceId})`,
