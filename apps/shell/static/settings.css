@@ -7,8 +7,8 @@
    iOS-style drill-down (56px top bar + Home list + back button) under 760px —
    the window is resizable and /settings is also reachable directly on a phone,
    so both are live. A vanilla, framework-free port of the Claude Design "LP-OS
-   Settings unified app" handoff; People & Access shares the Admin window's
-   model + API (GET/POST /api/roles, GET /api/catalog) — see admin.css. */
+   Settings unified app" handoff; People & Access is the users-and-roles console
+   (GET/POST /api/roles, GET /api/catalog) that replaced the Admin window. */
 
 :root {
   --bg: #0b0d11;

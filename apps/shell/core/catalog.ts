@@ -1,17 +1,17 @@
 /**
- * The desktop launcher catalog the Admin panel edits against — the folders and
+ * The desktop launcher catalog Settings/People & Access edits against — the folders and
  * apps a role's capability flags gate, and the `Folder/Item` names its
  * `default_home` boot layout references.
  *
  * This is the SERVER-SIDE mirror of the `FOLDERS` array in `static/os.js`: same
  * folder/item display names and the same gating `flag` per entry, minus the
  * runtime-only fields (url/allow/width/…). The OS shell owns the live launcher
- * table; the Admin window only needs "what can this role see, and what may its
+ * table; People & Access only needs "what can this role see, and what may its
  * boot layout point at", so it reads this trimmed view (injected as
  * `globalThis.LPOS_CATALOG`, also served at `/api/catalog`).
  *
  * KEEP IN SYNC with os.js FOLDERS: adding/renaming a folder or app there means
- * mirroring the name + flag here so the Admin preview and boot-layout picker
+ * mirroring the name + flag here so the desktop preview and boot-layout picker
  * match what the shell actually launches. Boot-layout refs are matched
  * case-insensitively by `resolveAppPath` in os.js, so casing here is cosmetic.
  */
@@ -53,7 +53,6 @@ export const APP_CATALOG: CatalogFolder[] = [
       },
       { id: "marketplace", name: "Marketplace", flag: "app.marketplace" },
       { id: "warehouse", name: "Warehouse", flag: "app.warehouse" },
-      { id: "admin", name: "Admin", flag: "app.admin" },
       { id: "settings", name: "Settings", flag: "app.settings" },
     ],
   },

@@ -9,13 +9,14 @@
 // bar with a back button, and an avatar menu for the same picker. The window is
 // resizable and /settings is reachable directly on a phone, so both are live.
 //
-// People & Access shares the Admin window's model + backend: it loads the live
+// People & Access is the users-and-roles console (formerly its own Admin
+// window, which no longer has a launcher entry): it loads the live
 // config from GET /api/roles (currentUser resolved from the ?user= the shell
 // rides along) and the launcher catalog from GET /api/catalog, edits a local
 // copy, and persists with POST /api/roles — same flag-resolution rules as
 // core/roles.ts / os.js (explicit per-role value wins, else the "*" wildcard,
 // else deny). The section itself is gated on the signed-in user holding
-// app.admin, mirroring how os.js hides the Admin launcher. Access is UX gating,
+// app.admin, the same flag the old Admin launcher used. Access is UX gating,
 // not authz (see os.js) — the same caveat here.
 //
 // Account, Security, Plan & Billing, and Notifications are per-device UI:
@@ -155,7 +156,7 @@
         { id: "app.graylog", label: "Graylog log search" },
         { id: "app.marketplace", label: "Marketplace listings (eBay)" },
         { id: "app.warehouse", label: "Warehouse (3D dashboard)" },
-        { id: "app.admin", label: "Admin (users & roles)" },
+        { id: "app.admin", label: "People & Access (users & roles)" },
         { id: "app.settings", label: "Settings" },
         { id: "ops.debugCounts", label: "Row-count debug endpoint" },
         {
@@ -234,7 +235,6 @@
         },
         { id: "marketplace", name: "Marketplace", flag: "app.marketplace" },
         { id: "warehouse", name: "Warehouse", flag: "app.warehouse" },
-        { id: "admin", name: "Admin", flag: "app.admin" },
         { id: "settings", name: "Settings", flag: "app.settings" },
       ],
     },
@@ -1259,7 +1259,7 @@
   function peopleHTML() {
     // The only section backed by roles.json. If the config didn't load, refuse
     // to render an editable seed so a Save can't clobber the real file — the
-    // other sections keep working. Mirrors admin.js's hard-stop.
+    // other sections keep working.
     if (!T().loaded) {
       return `<div class="pane people"><div class="pane-inner"><div class="people-note">Couldn't load the roles config — the shell API didn't answer. The People &amp; Access editor is hidden so it can't overwrite <span class="mono">core/roles.json</span> with defaults. The other Settings sections still work; reopen Settings to retry.</div></div></div>`;
     }

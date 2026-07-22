@@ -426,8 +426,8 @@ faithfully (rebrand "Thirsty OS" → "LP-OS"), then:
    studio→Samples-Import, marketplace→Kiosk + Marketplace); a step with a `path`
    also steers an already-open pane there (so inventory pulls Inventory back to
    the Dashboard after receiving left it on `/scan`), tiles warehouse LEFT /
-   primary app RIGHT,
-   and answers `{source:"thirsty-os", type:"warehouse-ack", step, opened}`.
+   primary app RIGHT, and answers
+   `{source:"thirsty-os", type:"warehouse-ack", step, opened}`.
 
 ### Roles config (apps/shell/core/roles.json + roles.ts)
 
@@ -495,21 +495,29 @@ splits the query string and appends it to the item URL). **User selection:**
 derived. `roles.ts` mirrors flag logic server-side and exports
 `rbacClientConfig(currentUserId)`.
 
-The `app.admin` flag gates the Admin window (below); admins hold it via `*`,
-other roles don't list it, so it stays hidden by default.
+The `app.admin` flag gates the People & Access section of Settings (below);
+admins hold it via `*`, other roles don't list it, so it stays hidden by
+default.
 
-### Admin window (apps/shell → static/admin.html + /admin)
+### Settings window (apps/shell → static/settings.html + /settings)
 
-Same-origin app page (FOLDERS app id `admin`, RBAC flag `app.admin`), served at
-`/admin` like `/marketplace` — the vanilla, framework-free build of the "Admin
-control panel for LP-OS" design handoff (variant 1a, "Workbench — roles first").
-Edits the whole roles config: per-role capability toggles (with the `*`
-wildcard + per-flag override/clear), the `default_home` boot layout (drag app
-chips into LEFT/RIGHT halves), users (add/remove/rename/reassign role), and
+Same-origin app page (FOLDERS app id `settings`, RBAC flag `app.settings`),
+served at `/settings` like `/marketplace` — the vanilla, framework-free build of
+the "LP-OS Settings unified app" design handoff, five sections: Account,
+Security, Plan & Billing, Notifications, and People & Access. The first four are
+per-device UI with no server backend (a mock-login OS has no auth or billing
+surface); no password or card value is read into state or transmitted.
+
+**People & Access** (gated on `app.admin`) is the roles console — it replaced
+the standalone Admin window, which no longer exists as a page or a launcher
+entry. It edits the whole roles config: per-role capability toggles (with the
+`*` wildcard + per-flag override/clear), the `default_home` boot layout (drag
+app chips into LEFT/RIGHT halves), users (add/remove/rename/reassign role), and
 capability flags (add/remove/relabel), with a live desktop preview per role. The
 signed-in user's own role is self-lockout-guarded (`*` stays on, role
-undeletable, can't remove yourself) — `openApp` rides `?user=` along to `/admin`
-so the panel knows who "you" is.
+undeletable, can't remove yourself) — `openApp` rides `?user=` along to
+`/settings` so the console knows who "you" is, and the sidebar's "Preview as"
+picker rewrites that same `?user=` to reload under another identity.
 
 - **Catalog:** `core/catalog.ts` (`APP_CATALOG`) is the server-side mirror of
   os.js `FOLDERS` (folder/app names + gating flags, no runtime fields), served

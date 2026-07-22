@@ -251,8 +251,9 @@ const ICONS = {
       <rect x="41" y="34" width="5" height="5" rx="1" fill="#fbbf24"/>
     </svg>`,
 
-  // Lucide "users" glyph on the gold tile — the Admin (users & roles) window.
-  admin: `
+  // Lucide "users" glyph on the gold tile — the Settings window (account,
+  // notifications, and the People & Access users-and-roles console).
+  settings: `
     <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#g-val)"/>
       <rect x="6" y="6" width="52" height="26" rx="14" fill="#fff" opacity=".12"/>
@@ -261,17 +262,6 @@ const ICONS = {
         <circle cx="9" cy="7" r="4"/>
         <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-      </g>
-    </svg>`,
-
-  // Lucide "settings" gear on the gold tile — the Settings window.
-  settings: `
-    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#g-val)"/>
-      <rect x="6" y="6" width="52" height="26" rx="14" fill="#fff" opacity=".12"/>
-      <g transform="translate(20 20)" fill="none" stroke="#3a2405" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3.4"/>
-        <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/>
       </g>
     </svg>`,
 };
@@ -477,27 +467,12 @@ const FOLDERS = [
         height: 800,
       },
       {
-        id: "admin",
-        name: "Admin",
-        icon: ICONS.admin,
-        flag: "app.admin",
-        // Users, roles, capability flags, and per-role default_home boot
-        // layout (served same-origin at /admin). Saving rewrites
-        // core/roles.json via POST /api/roles. Admins reach it via the `*`
-        // wildcard; other roles don't list app.admin, so it stays hidden.
-        // openApp appends ?user= so the panel knows who's signed in (and can't
-        // let them lock their own role out of this window).
-        url: "/admin",
-        width: 1180,
-        height: 780,
-      },
-      {
         id: "settings",
         name: "Settings",
         icon: ICONS.settings,
         flag: "app.settings",
         // Account, Notifications, and a People & Access section that reuses the
-        // Admin window's roles.json model (served same-origin at /settings).
+        // roles.json users-and-roles console (served same-origin at /settings).
         // openApp appends ?user= so Account prefills the signed-in user, the
         // app.admin gate on People & Access resolves, and its self-lockout
         // guard lands on the right role. The window's "Preview as" picker
@@ -1491,11 +1466,12 @@ function openApp(item) {
   // Attribution ride-along: the Inventory tracker and the Warehouse dashboard
   // both act as the shell's current mocked user, so their windows get ?user=
   // appended — the tracker forwards it to the bulk API, keeping the operator
-  // consistent across shell, tracker, and Postgres audit rows. The Admin window
-  // rides along too so it resolves the signed-in user (its self-lockout guard).
+  // consistent across shell, tracker, and Postgres audit rows. The Settings
+  // window rides along too so it resolves the signed-in user (its People &
+  // Access self-lockout guard).
   if (
     item.id === "inventory" || item.id === "warehouse" ||
-    item.id === "admin" || item.id === "settings"
+    item.id === "settings"
   ) {
     const withUser = urlWithParams(item.url, { user: currentUserId() });
     if (withUser) item = { ...item, url: withUser };

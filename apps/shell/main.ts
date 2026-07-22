@@ -484,16 +484,11 @@ app.get("/marketplace", async (ctx) => {
   return res ?? json({ error: "marketplace page missing" }, 500);
 });
 
-// Admin window (users, roles, capability flags, per-role boot layout). Static
-// page; it fetches /api/roles + /api/catalog and saves back via POST /api/roles.
-app.get("/admin", async (ctx) => {
-  const res = await serveStatic("/admin.html", ctx.req.method);
-  return res ?? json({ error: "admin page missing" }, 500);
-});
-
-// Settings window (Account, Notifications, People & Access). Same pattern as
-// /admin: static page whose People & Access section reuses /api/roles +
-// /api/catalog. The other sections are per-device UI with no server backend.
+// Settings window (Account, Security, Plan & Billing, Notifications, People &
+// Access). Same pattern as /marketplace: static page whose People & Access
+// section — the users/roles/flags/boot-layout console, formerly its own Admin
+// window — fetches /api/roles + /api/catalog and saves back via POST /api/roles.
+// The other sections are per-device UI with no server backend.
 app.get("/settings", async (ctx) => {
   const res = await serveStatic("/settings.html", ctx.req.method);
   return res ?? json({ error: "settings page missing" }, 500);
@@ -996,7 +991,7 @@ app.all("/api/roles", async (ctx) => {
   if (ctx.req.method === "GET") {
     return corsJson(rbacClientConfig(resolveUserId(ctx.url)));
   }
-  // Save from the Admin window (static/admin.js): validate the whole config,
+  // Save from Settings/People & Access (static/settings.js): validate the whole config,
   // swap it in-memory (the OS shell picks it up on its next paint), then
   // best-effort rewrite roles.json. Not an auth boundary — like every RBAC
   // flag, this is UX gating on a mock-login OS (see core/roles.ts).
@@ -1028,7 +1023,7 @@ app.all("/api/roles", async (ctx) => {
   return corsJson({ error: "Method not allowed" }, 405);
 });
 
-// The desktop launcher catalog the Admin window edits against (folders/apps a
+// The desktop launcher catalog Settings/People & Access edits against (folders/apps a
 // role's flags gate, and the names its boot layout may point at). Read-only
 // mirror of os.js FOLDERS; CORS like the other vocab reads.
 app.all("/api/catalog", (ctx) => {

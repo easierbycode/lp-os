@@ -108,13 +108,11 @@ Deno.test("GET /api/sample-statuses → vocabulary without DB", async () => {
   assert(Array.isArray(body) && body.length > 0);
 });
 
-Deno.test("GET /admin serves the admin window page", async () => {
+// The standalone Admin window is gone — Settings/People & Access replaced it,
+// page and route both. Nothing should still serve /admin.
+Deno.test("GET /admin is no longer served", async () => {
   const res = await handler(req("/admin"));
-  assertEquals(res.status, 200);
-  assertStringIncludes(res.headers.get("content-type") ?? "", "text/html");
-  const html = await res.text();
-  assertStringIncludes(html, "/admin.js");
-  assertStringIncludes(html, 'id="admin-root"');
+  assertEquals(res.status, 404);
 });
 
 Deno.test("GET /settings serves the Settings window page", async () => {
@@ -134,12 +132,14 @@ Deno.test("GET /api/catalog → launcher folders with gating flags", async () =>
   assert(Array.isArray(body));
   const apps = body.find((f: { id: string }) => f.id === "apps");
   assertEquals(apps.flag, "folder.apps");
-  assert(apps.items.some((i: { flag?: string }) => i.flag === "app.admin"));
-  // Settings joins the Apps folder gated by its own capability flag.
+  assert(apps.items.some((i: { flag?: string }) => i.flag === "app.inventory"));
+  // Settings joins the Apps folder gated by its own capability flag; the
+  // standalone Admin launcher is gone (Settings/People & Access replaces it).
   assert(apps.items.some((i: { flag?: string }) => i.flag === "app.settings"));
+  assert(!apps.items.some((i: { id: string }) => i.id === "admin"));
 });
 
-// The Admin window's Save. A malformed config must be rejected (400) before it
+// The People & Access Save. A malformed config must be rejected (400) before it
 // can reach roles.json; a valid save is exercised in the roles unit test, which
 // doesn't touch the real file.
 Deno.test("POST /api/roles rejects an invalid config", async () => {

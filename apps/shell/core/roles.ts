@@ -19,7 +19,7 @@
  * wildcard `"*"` supplies the default for any flag the role doesn't list; an
  * unknown role or unlisted flag with no wildcard denies by default.
  *
- * The Admin window (static/admin.js → `POST /api/roles`) edits this config at
+ * Settings/People & Access (static/settings.js → `POST /api/roles`) edits this config at
  * runtime: `applyRolesConfig` swaps the in-memory copy (so the next OS-shell
  * paint and `/api/roles` read reflect the change immediately) and
  * `persistRolesConfig` best-effort rewrites `roles.json` so the change survives
@@ -68,7 +68,7 @@ export interface RolesConfig {
 
 // Two-step cast: the JSON import infers narrow literal flag keys (with the
 // wildcard `"*"`) and tuple-less string[][], which don't structurally match
-// the declared shapes. `current` is mutable so the Admin window can swap the
+// the declared shapes. `current` is mutable so People & Access can swap the
 // whole config at runtime (see `applyRolesConfig`); every reader below reads it
 // live, so a save takes effect without a server restart.
 let current: RolesConfig = config as unknown as RolesConfig;
@@ -187,7 +187,7 @@ function asString(value: unknown): string {
 
 /**
  * Validate and normalize an untrusted `roles.json`-shaped payload (from the
- * Admin window's Save). Rejects anything that would strand the OS shell — a
+ * People & Access Save). Rejects anything that would strand the OS shell — a
  * config with no roles, a role with no id, a user pointing at a missing role,
  * or a `default_home` entry that isn't a `[appPath, side]` pair. Unknown extra
  * keys on entries are dropped, so the persisted file stays canonical.
