@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
-    <title>Install · LP-OS scraper extension</title>
+    <title>Install · LP extension</title>
     <style>
     :root {
       --bg: #0b0d11;
@@ -117,28 +117,53 @@
         </div>
       </div>
       <p
-        class="sub">The merged Chrome extension scrapes TikTok Shop seller/order pages (order list, product analytics, LIVE, Partner Center) into LP-OS's own message store via <code>POST /gelf</code>, with behaviors role-gated by the LP-OS shell user.</p>
+        class="sub">Adds a one-click <b>Scrape this page</b> button to your TikTok Shop pages, so the numbers you're looking at land in LP-OS instead of being copied by hand. Takes about two minutes to set up. Chrome only.</p>
 
       <div class="card">
-        <h2>1 · Get the extension</h2>
+        <h2>1 · Download</h2>
         <p
-          style="font-size:14px;margin:0"><a href="/extension.zip" download="lp-os-extension.zip"><b>Download lp-os-extension.zip</b></a> and unzip it (it contains a single <code>lp-os-extension/</code> folder). Working from a checkout of <code>lp-os</code>? The same files live at <code>extension/</code> — use that folder directly instead.</p>
+          style="font-size:14px;margin:0"><a href="/extension.zip" download="lp-os-extension.zip"><b>Download lp-os-extension.zip</b></a>, then unzip it. You'll get one folder named <code>lp-os-extension</code>.</p>
+        <p class="note">Keep that folder somewhere permanent — your Documents,
+          say. Chrome runs the extension from wherever you leave it, so moving or
+          deleting the folder later removes the extension.</p>
       </div>
 
       <div class="card">
-        <h2>2 · Load it (unpacked)</h2>
+        <h2>2 · Add it to Chrome</h2>
         <ol>
-          <li>Open <code>chrome://extensions</code> (paste it into the address bar — pages can't link to <code>chrome://</code>).</li>
-          <li>Turn on <b>Developer mode</b> (top-right).</li>
-          <li>Click <b>Load unpacked</b> and pick the unzipped <code>lp-os-extension/</code> folder (or the repo's <code>extension/</code>).</li>
-          <li>Open a TikTok Shop seller/order page — the scrape button appears (role-gated).</li>
+          <li>Type <code>chrome://extensions</code> into the address bar and press Enter.</li>
+          <li>Switch on <b>Developer mode</b> — the toggle in the top-right corner.</li>
+          <li>Click <b>Load unpacked</b>, then choose the <code>lp-os-extension</code> folder you just unzipped.</li>
+          <li>Click the puzzle-piece icon in Chrome's toolbar and pin <b>LP-OS TikTok Shop Scraper</b> so it's always one click away.</li>
         </ol>
-        <p
-          class="note">Chrome blocks <code>.crx</code> installs from outside the Web Store for normal profiles, so the supported path is <b>Load unpacked</b> (no <code>.crx</code> is published). Enterprise force-install is the only exception.</p>
+        <p class="note">Developer mode is just how Chrome installs an extension
+          that isn't in its store. Chrome will show a reminder banner about it on
+          startup — that's expected, and you can dismiss it.</p>
       </div>
 
-      <p
-        class="muted">No extension? You can still run Samples-Import directly via the Claude browser skill (the <code>samples-import</code> skill) — it opens the page and drives it without the extension.</p>
+      <div class="card">
+        <h2>3 · Tell it who you are</h2>
+        <ol>
+          <li>Click the LP extension icon in your toolbar.</li>
+          <li>Enter your LP-OS username — your handle, like <code>@boosteddealsdaily</code> — and click <b>Set</b>.</li>
+        </ol>
+        <p class="muted">Everything you scrape is credited to that name, so it
+          only needs doing once per computer.</p>
+      </div>
+
+      <div class="card">
+        <h2>4 · Use it</h2>
+        <p style="font-size:14px;margin:0 0 8px">Open any of your TikTok Shop
+          pages — Partner Center, the LIVE dashboard, Streamer Compass, or your
+          order pages — then click the LP icon and hit <b>Scrape this page</b>.</p>
+        <p
+          class="muted">The popup tells you whether the page you're on is one it
+          can read. If the button is greyed out, you're on a page it doesn't
+          cover — navigate to the dashboard or order you want and try again.</p>
+      </div>
+
+      <p class="muted">Something not working? Confirm you're signed in to TikTok
+        Shop in the same Chrome profile, then reload the page and try once more.</p>
     </div>
   </body>
 </html>

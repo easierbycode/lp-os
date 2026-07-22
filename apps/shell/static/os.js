@@ -433,9 +433,10 @@ const FOLDERS = [
         name: "Install Extension",
         icon: ICONS.puzzle,
         flag: "app.installExtension",
-        // Same-origin install help: load-unpacked steps for the merged
-        // extension in this repo's extension/ folder. Opened by the
-        // samples-import skill or from Apps.
+        // Same-origin install help: plain-language setup steps for the Chrome
+        // extension, download link included (/extension.zip is built from this
+        // repo's extension/ folder). Opened by the samples-import skill or
+        // from Apps.
         url: "/install",
         width: 600,
         height: 720,
