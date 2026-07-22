@@ -45,7 +45,7 @@ const OFFLINE_HTML =
   'font:15px/1.5 system-ui,sans-serif;background:#0b0d11;color:#e6e8ee">' +
   '<div style="text-align:center;padding:2rem"><h1 style="margin:0 0 .5rem;' +
   'font-size:1.25rem">Offline</h1><p style="margin:0;opacity:.7">LP-OS could ' +
-  'not reach the network. Reconnect and reload.</p></div>';
+  "not reach the network. Reconnect and reload.</p></div>";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

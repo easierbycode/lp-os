@@ -37,6 +37,9 @@ follows.
   `marketplace_accounts` table, entered via the shell's Marketplace window.
 - `extension/` — merged Chrome extension (agency + seller behaviors, role-gated
   by `?user=`).
+- `raw-assets/` — vendored Angular design-handoff source, kept verbatim as the
+  reference the vanilla shell windows are ported from. Nothing imports it; root
+  fmt/lint exclude it so it never drifts from upstream.
 - `.claude/skills/` — consolidated agent skills.
 
 ## Commands
