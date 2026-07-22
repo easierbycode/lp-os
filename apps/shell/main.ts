@@ -491,9 +491,9 @@ app.get("/admin", async (ctx) => {
   return res ?? json({ error: "admin page missing" }, 500);
 });
 
-// Settings window (Account, Security, Plan & Billing, Notifications, Team).
-// Same pattern as /admin: static page whose Team tab reuses /api/roles +
-// /api/catalog. The other tabs are per-device UI with no server backend.
+// Settings window (Account, Notifications, People & Access). Same pattern as
+// /admin: static page whose People & Access section reuses /api/roles +
+// /api/catalog. The other sections are per-device UI with no server backend.
 app.get("/settings", async (ctx) => {
   const res = await serveStatic("/settings.html", ctx.req.method);
   return res ?? json({ error: "settings page missing" }, 500);

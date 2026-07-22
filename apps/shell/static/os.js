@@ -496,10 +496,12 @@ const FOLDERS = [
         name: "Settings",
         icon: ICONS.settings,
         flag: "app.settings",
-        // Account, Security, Plan & Billing, Notifications, and a Team tab that
-        // reuses the Admin window's roles.json model (served same-origin at
-        // /settings). openApp appends ?user= so Account prefills the signed-in
-        // user and Team's self-lockout guard resolves the right role.
+        // Account, Notifications, and a People & Access section that reuses the
+        // Admin window's roles.json model (served same-origin at /settings).
+        // openApp appends ?user= so Account prefills the signed-in user, the
+        // app.admin gate on People & Access resolves, and its self-lockout
+        // guard lands on the right role. The window's "Preview as" picker
+        // rewrites that same ?user= to reload under another identity.
         url: "/settings",
         width: 1180,
         height: 800,
