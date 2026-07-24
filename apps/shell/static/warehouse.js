@@ -525,6 +525,12 @@ buildScreens();
 setStep("overview", { announce: false });
 loadLiveStats();
 
+// Auto-start the walk-through when launched with ?tour=1. The OS shell opens
+// this pane with tour=1 (see os.js ?tour= handling) so a shared /?tour=1 link
+// boots straight into the tour; /warehouse?tour=1 also works standalone.
+const tourParam = new URLSearchParams(location.search).get("tour");
+if (tourParam && tourParam !== "0" && tourParam !== "false") startTour();
+
 if (!EMBEDDED) {
   document.getElementById("standaloneNote").hidden = false;
 }
