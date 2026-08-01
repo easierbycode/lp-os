@@ -2648,13 +2648,14 @@ if (wsParams.get("workspace") === "samples-import") {
   if (statusEl) statusEl.textContent = "Samples-Import · e2e";
 }
 
-// ?tour=1 — auto-launch the Warehouse dashboard with its walk-through running.
-// Opening the pane with tour=1 makes warehouse.js auto-start the tour; each step
-// it posts is picked up by the warehouse-step listener above, which tiles the
-// step's apps beside it. tour=0/false suppresses. openApp already appends ?user=
-// for the warehouse item (attribution ride-along), so only tour is added here.
-const tourParam = wsParams.get("tour");
-if (tourParam && tourParam !== "0" && tourParam !== "false") {
+// ?tour=1 (or ?kiosk=1) — auto-launch the Warehouse dashboard with its
+// walk-through running. Opening the pane with tour=1 makes warehouse.js
+// auto-start the tour; each step it posts is picked up by the warehouse-step
+// listener above, which tiles the step's apps beside it. 0/false suppresses.
+// openApp already appends ?user= for the warehouse item (attribution
+// ride-along), so only tour is added here.
+const truthyParam = (v) => Boolean(v) && v !== "0" && v !== "false";
+if (truthyParam(wsParams.get("tour")) || truthyParam(wsParams.get("kiosk"))) {
   const wh = appItemById("warehouse");
   if (wh && allows(wh.flag) && itemConfigured(wh)) {
     const w = openApp({
