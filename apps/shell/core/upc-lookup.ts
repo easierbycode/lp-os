@@ -196,9 +196,43 @@ export function tiktokSearchCandidates(
   });
 }
 
-export function createUpcLookup(deps: { env: EnvReader }): UpcLookupService {
+// Upper bound on cached lookups. The route is unauthenticated and accepts any
+// digit string, so the process-local cache must not grow without limit.
+const DEFAULT_CACHE_MAX_ENTRIES = 1000;
+
+export function createUpcLookup(
+  deps: { env: EnvReader; cacheMaxEntries?: number },
+): UpcLookupService {
   const { env } = deps;
+  const cacheMax = Math.max(
+    1,
+    deps.cacheMaxEntries ?? DEFAULT_CACHE_MAX_ENTRIES,
+  );
+  // Map iteration order is insertion order, so the first key is the oldest.
   const cache = new Map<string, { value: UpcLookup; expires: number }>();
+
+  function cacheGet(key: string): UpcLookup | null {
+    const hit = cache.get(key);
+    if (!hit) return null;
+    if (hit.expires > Date.now()) return hit.value;
+    cache.delete(key);
+    return null;
+  }
+
+  function cachePut(key: string, value: UpcLookup, life: number) {
+    const now = Date.now();
+    cache.delete(key); // re-insert so a refreshed key counts as newest
+    if (cache.size >= cacheMax) {
+      // Sweep expired entries first, then evict oldest until there's room.
+      for (const [k, v] of cache) if (v.expires <= now) cache.delete(k);
+      while (cache.size >= cacheMax) {
+        const oldest = cache.keys().next().value;
+        if (oldest === undefined) break;
+        cache.delete(oldest);
+      }
+    }
+    cache.set(key, { value, expires: now + life });
+  }
 
   // "0" disables caching; unset/non-numeric falls back to the default.
   const ttl = (name: string, fallback: number) => {
@@ -520,17 +554,15 @@ export function createUpcLookup(deps: { env: EnvReader }): UpcLookupService {
     if (!clean) throw new Error("upc is required");
     const debug = Boolean(opts.debug);
     if (!debug) {
-      const hit = cache.get(clean);
-      if (hit && hit.expires > Date.now()) return hit.value;
+      const hit = cacheGet(clean);
+      if (hit) return hit;
     }
     const { lookup, errored } = await compute(clean, debug);
     if (!debug) {
       const life = errored || !lookup.ok
         ? ttl("LOOKUP_CACHE_NEG_TTL_MS", 60 * 60 * 1000)
         : ttl("LOOKUP_CACHE_TTL_MS", 24 * 60 * 60 * 1000);
-      if (life > 0) {
-        cache.set(clean, { value: lookup, expires: Date.now() + life });
-      }
+      if (life > 0) cachePut(clean, lookup, life);
     }
     return lookup;
   }

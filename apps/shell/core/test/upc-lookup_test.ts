@@ -72,3 +72,29 @@ Deno.test("lookupProductByUpc: all providers miss → ok:false", async () => {
     globalThis.fetch = realFetch;
   }
 });
+
+Deno.test("lookupProductByUpc: cache is bounded and evicts the oldest entry", async () => {
+  const realFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = ((input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes("upcitemdb")) {
+      calls++;
+      return Promise.resolve(Response.json({ items: [{ title: "Thing" }] }));
+    }
+    return Promise.resolve(new Response("nope", { status: 404 }));
+  }) as typeof fetch;
+  try {
+    const svc = createUpcLookup({ env: () => undefined, cacheMaxEntries: 2 });
+    await svc.lookupProductByUpc("111111111111");
+    await svc.lookupProductByUpc("222222222222");
+    await svc.lookupProductByUpc("333333333333"); // evicts 111…
+    const afterFill = calls;
+    await svc.lookupProductByUpc("333333333333"); // still cached
+    assertEquals(calls, afterFill);
+    await svc.lookupProductByUpc("111111111111"); // evicted → refetched
+    assertEquals(calls, afterFill + 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
