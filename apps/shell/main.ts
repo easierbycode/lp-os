@@ -48,6 +48,7 @@ import {
 import { APP_CATALOG } from "./core/catalog.ts";
 import { createProductAnalysis } from "./core/product-analysis.ts";
 import { createSampleImage } from "./core/sample-image.ts";
+import { createUpcLookup } from "./core/upc-lookup.ts";
 import {
   ExternalApiDisabledError,
   externalApiEnabled,
@@ -1103,6 +1104,25 @@ app.all("/api/product-lookup/:id", async (ctx) => {
       return corsJson({ ok: false, error: error.message }, 503);
     }
     return corsJson({ ok: false, error: errorMessage(error) }, 502);
+  }
+});
+
+// Scanned-barcode lookup (ported from data-pimp): UPC → product name via
+// UPCitemdb / Go-UPC / Barcode Lookup / Open Food Facts / Google Shopping, then
+// ranked TikTok Shop candidates via ScrapeCreators. ?debug=1 echoes the raw
+// SerpApi payloads and bypasses the cache. Cross-origin GET, carries CORS.
+const upcLookup = createUpcLookup({ env: envValue });
+app.all("/api/upc-lookup/:upc", async (ctx) => {
+  if (ctx.req.method === "OPTIONS") return corsPreflight();
+  if (ctx.req.method !== "GET") {
+    return corsJson({ ok: false, error: "Method not allowed" }, 405);
+  }
+  const upc = decodeURIComponent(ctx.params.upc || "");
+  const debug = ctx.url.searchParams.get("debug") === "1";
+  try {
+    return corsJson(await upcLookup.lookupProductByUpc(upc, { debug }));
+  } catch (error) {
+    return corsJson({ ok: false, upc, error: errorMessage(error) }, 502);
   }
 });
 

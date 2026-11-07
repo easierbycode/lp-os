@@ -634,3 +634,11 @@ Deno.test({
     assertEquals((await res.json()).error, "DATABASE_URL not configured");
   },
 });
+
+Deno.test("/api/upc-lookup is routed (405 on POST, not the API 404)", async () => {
+  const res = await handler(
+    req("/api/upc-lookup/0860013752903", { method: "POST" }),
+  );
+  assertEquals(res.status, 405);
+  assertEquals((await res.json()).error, "Method not allowed");
+});

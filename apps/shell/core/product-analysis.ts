@@ -663,7 +663,7 @@ export function createProductAnalysis(deps: {
 // Retry transient ScrapeCreators failures (5xx/429) a few times with linear
 // backoff. Their endpoints occasionally fault on requests they can otherwise
 // serve, and a short retry recovers the accurate result.
-async function fetchWithRetry(
+export async function fetchWithRetry(
   url: URL,
   init: RequestInit,
   attempts = 3,
@@ -833,7 +833,7 @@ function bestScrapeCreatorsSearchProduct(
   return best;
 }
 
-function scrapeCreatorsSearchProducts(
+export function scrapeCreatorsSearchProducts(
   body: unknown,
 ): Record<string, unknown>[] {
   const candidates = [
@@ -850,7 +850,7 @@ function scrapeCreatorsSearchProducts(
   return [];
 }
 
-function searchProductScore(query: string, title: string): number {
+export function searchProductScore(query: string, title: string): number {
   const normalizedQuery = searchText(query);
   const normalizedTitle = searchText(title);
   if (!normalizedQuery || !normalizedTitle) return 0;
@@ -875,7 +875,7 @@ function searchText(value: string): string {
     .trim();
 }
 
-function priceFromScrapeCreatorsSearchProduct(product: unknown): number {
+export function priceFromScrapeCreatorsSearchProduct(product: unknown): number {
   const candidates = [
     valueAt(product, ["price"]),
     valueAt(product, ["sale_price"]),
@@ -896,7 +896,7 @@ function priceFromScrapeCreatorsSearchProduct(product: unknown): number {
   return 0;
 }
 
-function scrapeCreatorsSearchProductTitle(
+export function scrapeCreatorsSearchProductTitle(
   product: unknown,
 ): string | undefined {
   return stringAt(product, ["title"]) ||
@@ -904,7 +904,7 @@ function scrapeCreatorsSearchProductTitle(
     stringAt(product, ["product_name"]);
 }
 
-function scrapeCreatorsSearchProductSeller(
+export function scrapeCreatorsSearchProductSeller(
   product: unknown,
 ): string | undefined {
   return stringAt(product, ["seller_info", "shop_name"]) ||
@@ -912,7 +912,9 @@ function scrapeCreatorsSearchProductSeller(
     stringAt(product, ["seller", "name"]);
 }
 
-function scrapeCreatorsSearchProductUrl(product: unknown): string | undefined {
+export function scrapeCreatorsSearchProductUrl(
+  product: unknown,
+): string | undefined {
   return stringAt(product, ["url"]) ||
     stringAt(product, ["seo_url", "canonical_url"]) ||
     stringAt(product, ["canonical_url"]);
@@ -921,7 +923,7 @@ function scrapeCreatorsSearchProductUrl(product: unknown): string | undefined {
 // Works for both response shapes: the product endpoint nests image objects
 // (url_list/thumb_url_list) under product_base, while search results carry
 // flat cover/img fields.
-function imageFromScrapeCreators(body: unknown): string | undefined {
+export function imageFromScrapeCreators(body: unknown): string | undefined {
   const candidates = [
     valueAt(body, ["product_info", "product_base", "images"]),
     valueAt(body, ["product_base", "images"]),
