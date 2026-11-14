@@ -642,3 +642,43 @@ Deno.test("/api/upc-lookup is routed (405 on POST, not the API 404)", async () =
   assertEquals(res.status, 405);
   assertEquals((await res.json()).error, "Method not allowed");
 });
+
+Deno.test("GET /kiosk/self and /kiosk/payments serve the kiosk pages", async () => {
+  const self = await handler(req("/kiosk/self"));
+  assertEquals(self.status, 200);
+  assertStringIncludes(await self.text(), "kiosk-self.js");
+  const staff = await handler(req("/kiosk/payments"));
+  assertEquals(staff.status, 200);
+  assertStringIncludes(await staff.text(), "kiosk-payments.js");
+});
+
+Deno.test({
+  name: "GET /api/kiosk/pay-config → cash.app link default without DB",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(req("/api/kiosk/pay-config"));
+    assertEquals(res.status, 200);
+    const cfg = await res.json();
+    assertEquals(cfg.ready, false);
+    assertEquals(cfg.defaultMethod, "cashapp_link");
+    assertEquals(cfg.cashApp.cashtag, "danieljohnsonaz");
+    assertEquals(cfg.cashApp.defaultAmount, "5.00");
+    assert(!("accessToken" in (cfg.square ?? {})));
+  },
+});
+
+Deno.test({
+  name: "POST /api/kiosk/quotes → 503 without DB",
+  ignore: hasDb,
+  fn: async () => {
+    const res = await handler(
+      req("/api/kiosk/quotes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sampleIds: [1] }),
+      }),
+    );
+    assertEquals(res.status, 503);
+    await res.body?.cancel();
+  },
+});

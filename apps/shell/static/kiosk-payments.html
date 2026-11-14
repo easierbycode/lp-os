@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#070a12">
+    <title>Kiosk Payments — LifePreneur</title>
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/kiosk-self.css">
+  </head>
+  <body>
+    <header class="ks-head">
+      <img
+        class="ks-logo"
+        src="https://assets.codepen.io/11817390/LifePreneur-logo.svg"
+        alt="LifePreneur"
+      >
+      <span class="ks-title">Kiosk Payments</span>
+    </header>
+    <div class="kp-wrap">
+      <p class="ks-muted">
+        Self-checkout sales paid with the Cash App link wait here until you
+        check Cash App and confirm them. Confirming marks the items sold;
+        rejecting puts them back on sale.
+      </p>
+      <div class="kp-bar">
+        <label class="ks-muted" for="kp-filter">Show</label>
+        <select id="kp-filter" class="ks-input kp-select">
+          <option value="claimed,error">Waiting on you</option>
+          <option value="pending,charging">In progress</option>
+          <option value="paid">Paid</option>
+          <option value="cancelled,expired,rejected">
+            Cancelled / expired / rejected
+          </option>
+        </select>
+        <input
+          id="kp-operator"
+          class="ks-input kp-operator"
+          placeholder="Your name (for the record)"
+        >
+        <button id="kp-refresh" class="ks-btn" type="button">Refresh</button>
+      </div>
+      <div id="kp-list"></div>
+    </div>
+    <script type="module" src="/kiosk-payments.js"></script>
+  </body>
+</html>

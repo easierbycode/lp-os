@@ -367,6 +367,82 @@ export function lookupSamplesByCode(code: string): Promise<{
   return lookupByCodeOn(getPool(), code);
 }
 
+// ---------------------------------------------------------------------------
+// Self-serve kiosk checkout (kiosk-payments.ts owns the SQL + transactions;
+// this runs each call on its own checked-out client so BEGIN/COMMIT stay on
+// one connection).
+// ---------------------------------------------------------------------------
+
+export {
+  type CompleteKioskPaymentInput,
+  type CreateKioskQuoteInput,
+  KIOSK_MAX_ITEMS,
+  type KioskPayment,
+  KioskPaymentError,
+  type KioskPaymentItem,
+  type KioskPaymentMethod,
+  type KioskPaymentStatus,
+  samplePriceCents,
+  validateSampleIds,
+} from "./kiosk-payments.ts";
+import * as kiosk from "./kiosk-payments.ts";
+import type { SqlClient as KioskSqlClient } from "./inventory.ts";
+
+async function withClient<T>(
+  fn: (client: KioskSqlClient) => Promise<T>,
+): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    return await fn(client);
+  } finally {
+    client.release();
+  }
+}
+
+type KioskPaymentRow = kiosk.KioskPayment;
+
+/** Pool-backed kiosk checkout store (see kiosk-payments.ts). */
+export const KioskPayments: {
+  createQuote(input: kiosk.CreateKioskQuoteInput): Promise<KioskPaymentRow>;
+  get(id: string): Promise<KioskPaymentRow | null>;
+  list(
+    statuses: kiosk.KioskPaymentStatus[],
+    limit?: number,
+  ): Promise<KioskPaymentRow[]>;
+  release(
+    id: string,
+    to: "cancelled" | "expired" | "rejected",
+    from?: kiosk.KioskPaymentStatus[],
+    operator?: string | null,
+  ): Promise<KioskPaymentRow>;
+  releaseExpired(): Promise<number>;
+  beginCharge(id: string, idempotencyKey: string): Promise<KioskPaymentRow>;
+  resetCharge(id: string, error: string): Promise<KioskPaymentRow | null>;
+  markError(id: string, error: string): Promise<KioskPaymentRow | null>;
+  claim(id: string): Promise<KioskPaymentRow>;
+  complete(
+    id: string,
+    input: kiosk.CompleteKioskPaymentInput,
+  ): Promise<{ payment: KioskPaymentRow; replayed: boolean }>;
+} = {
+  createQuote: (input) => withClient((c) => kiosk.createKioskQuote(c, input)),
+  get: (id) => withClient((c) => kiosk.getKioskPayment(c, id)),
+  list: (statuses, limit) =>
+    withClient((c) => kiosk.listKioskPayments(c, statuses, limit)),
+  release: (id, to, from, operator) =>
+    withClient((c) => kiosk.releaseKioskQuote(c, id, to, from, operator)),
+  releaseExpired: () => withClient((c) => kiosk.releaseExpiredKioskQuotes(c)),
+  beginCharge: (id, idempotencyKey) =>
+    withClient((c) => kiosk.beginKioskCharge(c, id, idempotencyKey)),
+  resetCharge: (id, error) =>
+    withClient((c) => kiosk.resetKioskCharge(c, id, error)),
+  markError: (id, error) =>
+    withClient((c) => kiosk.markKioskPaymentError(c, id, error)),
+  claim: (id) => withClient((c) => kiosk.claimKioskPayment(c, id)),
+  complete: (id, input) =>
+    withClient((c) => kiosk.completeKioskPayment(c, id, input)),
+};
+
 let schemaPromise: Promise<void> | null = null;
 
 /** Idempotent: creates every LP-OS table/index and seed row if missing.

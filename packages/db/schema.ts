@@ -180,4 +180,29 @@ CREATE TABLE IF NOT EXISTS public.inventory_batches (
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_batch_id ON public.transactions (batch_id);
+
+CREATE TABLE IF NOT EXISTS public.kiosk_payments (
+  id                  UUID PRIMARY KEY,
+  kiosk_id            TEXT,
+  method              TEXT NOT NULL,
+  status              TEXT NOT NULL DEFAULT 'pending',
+  items               JSONB NOT NULL,
+  amount_cents        INTEGER NOT NULL CHECK (amount_cents > 0),
+  currency            TEXT NOT NULL DEFAULT 'USD',
+  pay_url             TEXT,
+  idempotency_key     TEXT UNIQUE,
+  attempts            INTEGER NOT NULL DEFAULT 0,
+  provider_payment_id TEXT,
+  receipt_url         TEXT,
+  receipt_number      TEXT,
+  confirmed_by        TEXT,
+  last_error          TEXT,
+  expires_at          TIMESTAMPTZ NOT NULL,
+  claimed_at          TIMESTAMPTZ,
+  paid_at             TIMESTAMPTZ,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_kiosk_payments_status_expires ON public.kiosk_payments (status, expires_at);
 `;

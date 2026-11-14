@@ -50,6 +50,14 @@ import { createProductAnalysis } from "./core/product-analysis.ts";
 import { createSampleImage } from "./core/sample-image.ts";
 import { createUpcLookup } from "./core/upc-lookup.ts";
 import {
+  createKioskCheckout,
+  DEFAULT_CASHAPP_URL,
+  DEFAULT_SELLABLE_STATUSES,
+  KioskCheckoutError,
+  parseCashAppUrl,
+} from "./core/kiosk-checkout.ts";
+import { createSquarePayment, squareConfigFromEnv } from "./core/square.ts";
+import {
   ExternalApiDisabledError,
   externalApiEnabled,
   externalApiStates,
@@ -1584,6 +1592,167 @@ app.get("/api/comparison", async () => {
   } catch (error) {
     return json({ error: errorMessage(error) }, 500);
   }
+});
+
+/* ------------------------------------------------- self-serve checkout -- */
+// /kiosk/self: customer-facing scan → cart → pay with Cash App → receipt.
+// Default payment is the plain cash.app link (KIOSK_CASHAPP_URL) shown as a
+// QR; staff confirm those at /kiosk/payments. Square's Cash App Pay (auto-
+// confirmed) is offered too once SQUARE_* env is set. See
+// core/kiosk-checkout.ts.
+
+function kioskCashAppConfig() {
+  const raw = (envValue("KIOSK_CASHAPP_URL") ?? "").trim();
+  if (raw.toLowerCase() === "off") return null;
+  const parsed = parseCashAppUrl(raw || DEFAULT_CASHAPP_URL);
+  if (!parsed) {
+    console.warn(
+      "[lp-os] KIOSK_CASHAPP_URL is not a https://cash.app/$cashtag[/amount] link; Cash App link checkout is off",
+    );
+  }
+  return parsed;
+}
+
+function kioskSellableStatuses(): string[] {
+  const listed = (envValue("KIOSK_SELLABLE_STATUSES") ?? "")
+    .split(",").map((v) => v.trim()).filter(Boolean);
+  return listed.length ? listed : DEFAULT_SELLABLE_STATUSES;
+}
+
+const kioskCheckout = createKioskCheckout({
+  store: hasDb
+    ? {
+      ...db.KioskPayments,
+      lookupByCode: (code) => db.lookupSamplesByCode(code),
+    }
+    : null,
+  cashApp: kioskCashAppConfig(),
+  square: squareConfigFromEnv(envValue),
+  createPayment: (cfg, input) => createSquarePayment(cfg, input),
+  isKioskDisabled: (id) =>
+    relay().kiosks().some((k) => k.id === id && k.disabled),
+  sellableStatuses: kioskSellableStatuses(),
+  ttlSeconds: Number(envValue("KIOSK_QUOTE_TTL_SECONDS") ?? "") || undefined,
+  // Per-creator resale revenue: the sale itself is already recorded
+  // atomically, so lifecycle only emits the analytics event (graylogOnly).
+  attributeSale: lifecycle
+    ? async (payment) => {
+      for (const item of payment.items) {
+        try {
+          await lifecycle.recordSampleSold({
+            sampleId: item.sample_id,
+            salePrice: item.price_cents / 100,
+            marketplace: "kiosk",
+            buyer: "kiosk",
+            orderRef: payment.provider_payment_id || payment.id,
+            operator: payment.confirmed_by || payment.kiosk_id || "kiosk",
+            graylogOnly: true,
+          });
+        } catch (error) {
+          console.warn(
+            `[lp-os] kiosk sale of sample ${item.sample_id} not attributed: ${
+              errorMessage(error)
+            }`,
+          );
+        }
+      }
+    }
+    : undefined,
+});
+
+async function kioskRoute(
+  run: () => Promise<unknown> | unknown,
+  status = 200,
+): Promise<Response> {
+  try {
+    return json(await run(), status);
+  } catch (error) {
+    if (error instanceof KioskCheckoutError) {
+      return json(
+        {
+          error: error.message,
+          code: error.code,
+          details: error.details ?? null,
+        },
+        error.status,
+      );
+    }
+    return json({ error: errorMessage(error) }, 500);
+  }
+}
+
+async function kioskBody(req: Request): Promise<Record<string, unknown>> {
+  try {
+    return await readJsonBody(req);
+  } catch (error) {
+    throw new KioskCheckoutError(400, "invalid", errorMessage(error));
+  }
+}
+
+app.get(
+  "/api/kiosk/pay-config",
+  () => kioskRoute(() => kioskCheckout.config()),
+);
+app.get(
+  "/api/kiosk/lookup",
+  (ctx) =>
+    kioskRoute(() => kioskCheckout.lookup(ctx.url.searchParams.get("code"))),
+);
+app.get(
+  "/api/kiosk/quotes",
+  (ctx) =>
+    kioskRoute(() => kioskCheckout.list(ctx.url.searchParams.get("status"))),
+);
+app.post(
+  "/api/kiosk/quotes",
+  (ctx) =>
+    kioskRoute(
+      async () => kioskCheckout.createQuote(await kioskBody(ctx.req)),
+      201,
+    ),
+);
+app.get(
+  "/api/kiosk/quotes/:id",
+  (ctx) => kioskRoute(() => kioskCheckout.get(ctx.params.id)),
+);
+app.post(
+  "/api/kiosk/quotes/:id/cancel",
+  (ctx) => kioskRoute(() => kioskCheckout.cancel(ctx.params.id)),
+);
+app.post(
+  "/api/kiosk/quotes/:id/claim",
+  (ctx) => kioskRoute(() => kioskCheckout.claim(ctx.params.id)),
+);
+app.post(
+  "/api/kiosk/quotes/:id/pay",
+  (ctx) =>
+    kioskRoute(async () =>
+      kioskCheckout.pay(ctx.params.id, await kioskBody(ctx.req))
+    ),
+);
+app.post(
+  "/api/kiosk/quotes/:id/confirm",
+  (ctx) =>
+    kioskRoute(async () =>
+      kioskCheckout.confirm(ctx.params.id, await kioskBody(ctx.req))
+    ),
+);
+app.post(
+  "/api/kiosk/quotes/:id/reject",
+  (ctx) =>
+    kioskRoute(async () =>
+      kioskCheckout.reject(ctx.params.id, await kioskBody(ctx.req))
+    ),
+);
+
+// Customer-facing pages, registered before the /kiosk/* SPA catch-all.
+app.get("/kiosk/self", async (ctx) => {
+  const res = await serveStatic("/kiosk-self.html", ctx.req.method);
+  return res ?? json({ error: "kiosk page missing" }, 500);
+});
+app.get("/kiosk/payments", async (ctx) => {
+  const res = await serveStatic("/kiosk-payments.html", ctx.req.method);
+  return res ?? json({ error: "kiosk page missing" }, 500);
 });
 
 /* ------------------------------------------------------------------ kiosk -- */

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <!-- No pinch-zoom: this page runs full screen on a shared kiosk. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    >
+    <meta name="theme-color" content="#070a12">
+    <title>Self Checkout — LifePreneur</title>
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/kiosk-self.css">
+  </head>
+  <body>
+    <header class="ks-head">
+      <img
+        class="ks-logo"
+        src="https://assets.codepen.io/11817390/LifePreneur-logo.svg"
+        alt="LifePreneur"
+      >
+      <span class="ks-title">Self Checkout</span>
+    </header>
+
+    <!-- kiosk-self.js renders every screen (start, cart, pay, done) here. -->
+    <main id="ks-root" class="ks-root" aria-live="polite">
+      <div class="ks-center">
+        <div class="ks-spinner" aria-hidden="true"></div>
+      </div>
+    </main>
+
+    <div id="ks-toast" class="ks-toast" role="status" hidden></div>
+
+    <script src="/vendor/qrcode-generator/qrcode.js"></script>
+    <script type="module" src="/kiosk-self.js"></script>
+  </body>
+</html>

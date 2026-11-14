@@ -1,0 +1,453 @@
+/* LP-OS self-serve kiosk (/kiosk/self) and staff payments page
+   (/kiosk/payments). Same dark palette as kiosk.css, sized for a touch
+   screen viewed at arm's length. No CDN fonts. */
+
+:root {
+  color-scheme: dark;
+  --bg: hsl(222 47% 5%);
+  --card: hsl(218 24.4% 8.8%);
+  --fg: hsl(210 40% 96%);
+  --muted: hsl(220 20% 75%);
+  --border: hsl(217 32% 15%);
+  --primary: hsl(30 97% 61%);
+  --primary-fg: hsl(222 47% 5%);
+  --cash: #00d64f; /* Cash App green */
+  --cash-fg: #04140a;
+  --danger: hsl(0 72% 71%);
+  --radius: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+body.ks-kiosk,
+body:has(.ks-root) {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+.ks-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ks-logo {
+  height: 34px;
+}
+
+.ks-title {
+  font-weight: 600;
+  font-size: 20px;
+}
+
+.ks-root {
+  min-height: calc(100vh - 68px);
+  padding: 28px;
+}
+
+.ks-center {
+  min-height: calc(100vh - 124px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.ks-h1 {
+  font-size: 40px;
+  margin: 0;
+}
+
+.ks-h2 {
+  font-size: 26px;
+  margin: 0 0 14px;
+}
+
+.ks-lead {
+  font-size: 22px;
+  max-width: 34ch;
+  margin: 0;
+}
+
+.ks-muted {
+  color: var(--muted);
+  margin: 0;
+}
+
+.ks-small {
+  font-size: 15px;
+}
+
+.ks-scan-ic {
+  width: 120px;
+  height: 120px;
+  color: var(--primary);
+}
+
+.ks-spinner {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 4px solid var(--border);
+  border-top-color: var(--primary);
+  animation: ks-spin 0.9s linear infinite;
+}
+
+@keyframes ks-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ks-codebox {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  width: min(460px, 100%);
+}
+
+.ks-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.ks-btn {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  border-radius: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  min-height: 52px;
+}
+
+.ks-btn:active {
+  transform: scale(0.98);
+}
+
+.ks-btn-xl {
+  font-size: 22px;
+  min-height: 68px;
+  padding: 16px 28px;
+  width: 100%;
+}
+
+.ks-btn-cash {
+  background: var(--cash);
+  color: var(--cash-fg);
+  border-color: transparent;
+}
+
+.ks-btn-ghost {
+  background: transparent;
+  width: 100%;
+}
+
+.ks-btn-link {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.ks-cart,
+.ks-pay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 28px;
+  align-items: start;
+}
+
+.ks-cart-side,
+.ks-pay-side {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 20px;
+}
+
+.ks-total {
+  font-size: 52px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.ks-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ks-items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ks-items-done {
+  width: min(560px, 100%);
+}
+
+.ks-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.ks-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #0d1220;
+  flex: none;
+}
+
+.ks-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.ks-item-name {
+  margin: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ks-price {
+  margin: 0;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.ks-remove {
+  font: inherit;
+  font-size: 28px;
+  line-height: 1;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex: none;
+}
+
+.ks-qr,
+.ks-square {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.ks-qr svg {
+  width: 100%;
+  height: auto;
+}
+
+.ks-square {
+  background: var(--card);
+  border: 1px solid var(--border);
+  aspect-ratio: auto;
+  min-height: 260px;
+  gap: 16px;
+}
+
+#cash-app-pay {
+  width: 100%;
+  max-width: 420px;
+}
+
+.ks-steps {
+  margin: 8px 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ks-check {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--cash);
+  color: var(--cash-fg);
+  font-size: 56px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ks-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  background: var(--fg);
+  color: var(--bg);
+  font-weight: 600;
+  padding: 14px 22px;
+  border-radius: 999px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
+}
+
+@media (max-width: 820px) {
+  .ks-root {
+    padding: 16px;
+  }
+  .ks-cart,
+  .ks-pay {
+    grid-template-columns: 1fr;
+  }
+  .ks-cart-side,
+  .ks-pay-side {
+    position: static;
+  }
+  .ks-h1 {
+    font-size: 30px;
+  }
+  .ks-total {
+    font-size: 40px;
+  }
+}
+
+/* ----------------------------------------------- staff payments page -- */
+
+.kp-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+  user-select: text;
+}
+
+.kp-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 8px 0 18px;
+}
+
+.kp-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+.kp-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.kp-amount {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.kp-badge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.kp-badge-claimed {
+  background: var(--cash);
+  color: var(--cash-fg);
+}
+
+.kp-badge-error {
+  background: var(--danger);
+  color: #2a0707;
+}
+
+.kp-items {
+  margin: 8px 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.kp-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kp-error {
+  color: var(--danger);
+}
+
+.kp-select {
+  flex: none;
+}
+
+.kp-operator {
+  max-width: 260px;
+}
